@@ -53,7 +53,7 @@ public:
             cfg.offset_rotation = 0;
 
             cfg.invert       = true;        // ST7789V2 requires colour inversion
-            cfg.rgb_order    = false;       // BGR
+            cfg.rgb_order    = true;        // RGB (panel is RGB order; false would swap R↔B)
             cfg.readable     = false;
             cfg.bus_shared   = false;
             _panel.config(cfg);
