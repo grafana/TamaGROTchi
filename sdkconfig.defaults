@@ -1,0 +1,28 @@
+# =============================================================================
+# Tamagrotchi — ESP-IDF sdkconfig overrides
+# These are merged by PlatformIO during the build (before sdkconfig is generated).
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# MbedTLS: reduce per-connection DRAM usage for HTTPS/OTLP pushes
+# Default SSL I/O buffers are 16384 bytes each (32KB just for one connection).
+# Grafana Cloud cert chain ≈ 4KB, OTLP POST payloads ≈ 1–3KB — these sizes
+# are more than sufficient.
+# ---------------------------------------------------------------------------
+CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN=8192
+CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=4096
+
+# Dynamic buffer mode: I/O buffers are only allocated while data is flowing,
+# then freed — instead of being held for the entire connection lifetime.
+CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
+
+# Free the peer certificate and config data from heap after the TLS handshake
+# completes; they are no longer needed during the application data phase.
+CONFIG_MBEDTLS_DYNAMIC_FREE_PEER_CERT=y
+CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
+
+# ---------------------------------------------------------------------------
+# SPIRAM: allow WiFi and LwIP internal buffers to allocate from PSRAM first.
+# This can free ~100KB of DRAM, giving the TLS stack room to breathe.
+# ---------------------------------------------------------------------------
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y

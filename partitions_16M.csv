@@ -1,0 +1,13 @@
+# Tamagrotchi — 16 MB flash partition table
+#
+# Total flash: 16 MB (0x1000000)
+# Bootloader: 0x1000–0x8000 (reserved by ESP-IDF, not listed here)
+# Partition table: 0x8000–0xA000
+#
+# Name,   Type, SubType, Offset,   Size,     Flags
+nvs,      data, nvs,     0x9000,   0x5000,
+otadata,  data, ota,     0xe000,   0x2000,
+app0,     app,  ota_0,   0x10000,  0x300000,
+app1,     app,  ota_1,   0x310000, 0x300000,
+littlefs, data, spiffs,  0x610000, 0x200000,
+coredump, data, coredump,0x810000, 0x10000,

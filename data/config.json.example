@@ -1,0 +1,17 @@
+{
+  "wifi": {
+    "ssid": "YOUR_SSID",
+    "password": "YOUR_PASSWORD"
+  },
+  "grafana": {
+    "otlp_base": "https://otlp-gateway-prod-<region>.grafana.net/otlp",
+    "auth_b64":  "Basic <your_grafana_cloud_token>",
+    "device_id": "tamagrotchi"
+  },
+  "game": {
+    "demo_speed": false,
+    "push_interval_s": 60,
+    "buzzer": true,
+    "flash_alerts": true
+  }
+}

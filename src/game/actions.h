@@ -1,0 +1,26 @@
+#pragma once
+#include "pet_state.h"
+
+// =============================================================================
+// Player-triggered actions — called from button/shake handler in main.cpp
+// =============================================================================
+
+// Feed Grot: +25 hunger (capped 100), plays MELODY_FEED
+// Returns false if action was blocked (pet dead/evolving)
+bool action_feed(PetState* p);
+
+// Play with Grot: +20 happiness (capped 100), plays MELODY_HAPPY
+bool action_play(PetState* p);
+
+// Give medicine: clears sick status, +30 health, plays MELODY_MEDICINE
+bool action_medicine(PetState* p);
+
+// Discipline: +5 discipline score
+bool action_discipline(PetState* p);
+
+// Apply dizzy effect from a hard shake
+void action_dizzy(PetState* p, float accel_mag);
+
+// Wake pet from sleep (e.g. from gentle shake)
+// counts as care mistake if before wakeHour
+void action_wake(PetState* p, uint8_t current_hour);
