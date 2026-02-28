@@ -5,9 +5,14 @@
 // Player-triggered actions — called from button/shake handler in main.cpp
 // =============================================================================
 
-// Feed Grot: +25 hunger (capped 100), plays MELODY_FEED
+enum class FoodType : uint8_t {
+    MICROCHIP,  // hunger +20, happiness +5  — functional food
+    SIN_WAVE,   // hunger +10, happiness +15 — fun/party food
+};
+
+// Feed Grot with the chosen food type, plays MELODY_FEED
 // Returns false if action was blocked (pet dead/evolving)
-bool action_feed(PetState* p);
+bool action_feed(PetState* p, FoodType food = FoodType::MICROCHIP);
 
 // Play with Grot: +20 happiness (capped 100), plays MELODY_HAPPY
 bool action_play(PetState* p);

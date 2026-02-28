@@ -5,12 +5,13 @@
 // Frame tables
 //
 // Sprite → state mapping:
-//   grot_0..3          idle bob (4 fr)   → egg idle, baby idle, tired adult idle
-//   grot_blink_0..1    blink   (2 fr)    → sleeping
-//   grot_wave_0..5     wave    (6 fr)    → happy (baby / child / good adult)
-//   grot_walk_0..7     walk    (8 fr)    → child idle, excellent adult idle
-//   grot_jumping_0..7  jump    (8 fr)    → excited adult happy, dizzy (last 4 fr)
-//   grot_thinks_0..4   thinks  (5 fr)    → sad, sick, dead
+//   grot_0..3               idle bob (4 fr)   → egg idle, baby idle, tired adult idle
+//   grot_blink_0..1         blink   (2 fr)    → sleeping
+//   grot_wave_0..5          wave    (6 fr)    → happy (baby / child / good adult)
+//   grot_walk_0..7          walk R  (8 fr)    → child/adult idle, facing right
+//   grot_walk_left_0..7     walk L  (8 fr)    → child/adult idle, facing left
+//   grot_jumping_0..7       jump    (8 fr)    → excited adult happy, dizzy (last 4 fr)
+//   grot_thinks_0..4        thinks  (5 fr)    → sad, sick, dead
 // =============================================================================
 
 // --- Egg ---
@@ -65,6 +66,18 @@ static const lv_image_dsc_t* adult_good_happy[] = {
 // --- Adult / Senior — Tired quality ---
 static const lv_image_dsc_t* adult_tired_idle[] = {
     &grot_0, &grot_1, nullptr
+};
+
+// --- Left-facing walk tables (mirror of right-facing; same frame counts) ---
+static const lv_image_dsc_t* child_idle_left[] = {
+    &grot_walk_left_0, &grot_walk_left_1, &grot_walk_left_2, &grot_walk_left_3, nullptr
+};
+static const lv_image_dsc_t* adult_exc_idle_left[] = {
+    &grot_walk_left_0, &grot_walk_left_1, &grot_walk_left_2, &grot_walk_left_3,
+    &grot_walk_left_4, &grot_walk_left_5, &grot_walk_left_6, &grot_walk_left_7, nullptr
+};
+static const lv_image_dsc_t* adult_good_idle_left[] = {
+    &grot_walk_left_0, &grot_walk_left_1, &grot_walk_left_2, &grot_walk_left_3, nullptr
 };
 
 // --- Shared override states ---
@@ -141,4 +154,21 @@ const lv_image_dsc_t* const* grot_get_frames(uint8_t stage_u8, uint8_t emotion_u
 
 uint8_t grot_get_frame_count(uint8_t stage, uint8_t emotion, uint8_t quality) {
     return count_frames(grot_get_frames(stage, emotion, quality));
+}
+
+const lv_image_dsc_t* const* grot_get_walk_left_frames(uint8_t stage_u8, uint8_t quality_u8) {
+    auto stage   = static_cast<LifeStage>(stage_u8);
+    auto quality = static_cast<EvoQuality>(quality_u8);
+    switch (stage) {
+        case LifeStage::CHILD:
+        case LifeStage::TEEN:
+            return child_idle_left;
+        case LifeStage::ADULT:
+        case LifeStage::SENIOR:
+            if (quality == EvoQuality::EXCELLENT) return adult_exc_idle_left;
+            if (quality == EvoQuality::GOOD)      return adult_good_idle_left;
+            return nullptr;  // TIRED doesn't walk
+        default:
+            return nullptr;
+    }
 }

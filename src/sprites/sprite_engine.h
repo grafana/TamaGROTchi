@@ -15,3 +15,7 @@ void sprite_engine_set_state(LifeStage stage, GrotEmotion emotion, EvoQuality qu
 
 // Returns the lv_obj_t* of the sprite image (for repositioning if needed)
 lv_obj_t* sprite_engine_get_obj();
+
+// Cycle through animation states for development testing.
+// Each call advances to the next state in the sequence and prints it to Serial.
+void sprite_engine_test_next();

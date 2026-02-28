@@ -29,7 +29,7 @@ extern const lv_image_dsc_t grot_wave_3;
 extern const lv_image_dsc_t grot_wave_4;
 extern const lv_image_dsc_t grot_wave_5;
 
-// grot-walk.png — 8-frame walk cycle
+// grot-walk.png — 8-frame right-facing walk cycle
 extern const lv_image_dsc_t grot_walk_0;
 extern const lv_image_dsc_t grot_walk_1;
 extern const lv_image_dsc_t grot_walk_2;
@@ -38,6 +38,16 @@ extern const lv_image_dsc_t grot_walk_4;
 extern const lv_image_dsc_t grot_walk_5;
 extern const lv_image_dsc_t grot_walk_6;
 extern const lv_image_dsc_t grot_walk_7;
+
+// grot-walk-left.png — 8-frame left-facing walk cycle
+extern const lv_image_dsc_t grot_walk_left_0;
+extern const lv_image_dsc_t grot_walk_left_1;
+extern const lv_image_dsc_t grot_walk_left_2;
+extern const lv_image_dsc_t grot_walk_left_3;
+extern const lv_image_dsc_t grot_walk_left_4;
+extern const lv_image_dsc_t grot_walk_left_5;
+extern const lv_image_dsc_t grot_walk_left_6;
+extern const lv_image_dsc_t grot_walk_left_7;
 
 // grot-jumping.png — 8-frame jump
 extern const lv_image_dsc_t grot_jumping_0;
@@ -66,3 +76,8 @@ inline void grot_frames_init() {}
 // ---------------------------------------------------------------------------
 extern const lv_image_dsc_t* const* grot_get_frames(uint8_t stage, uint8_t emotion, uint8_t quality);
 extern uint8_t grot_get_frame_count(uint8_t stage, uint8_t emotion, uint8_t quality);
+
+// Left-facing walk frames for stages that use the walk animation.
+// Returns nullptr for stages/states that don't walk.
+// Frame count always matches grot_get_frames() for the same stage/quality.
+extern const lv_image_dsc_t* const* grot_get_walk_left_frames(uint8_t stage, uint8_t quality);

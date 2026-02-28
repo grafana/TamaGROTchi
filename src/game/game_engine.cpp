@@ -226,7 +226,7 @@ GrotEmotion game_engine_get_emotion(const PetState* p) {
         case PetStatus::SLEEPING: return GrotEmotion::SLEEPING;
         case PetStatus::EVOLVING: return GrotEmotion::EVOLVING;
         case PetStatus::DIZZY:    return GrotEmotion::DIZZY;
-        case PetStatus::PLAYING:  return GrotEmotion::HAPPY;
+        case PetStatus::PLAYING:  return GrotEmotion::NORMAL;
         case PetStatus::EATING:   return GrotEmotion::HAPPY;
         case PetStatus::ALERT:    return GrotEmotion::SAD;
         default:
