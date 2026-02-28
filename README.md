@@ -1,8 +1,9 @@
 # Tamagrotchi
 
-A Tamagotchi for Grafana employees, featuring **Grot** — the Grafana mascot — as your virtual pet. Keep Grot alive, watch him evolve, and observe his vital signs flowing into Grafana Cloud as OTLP metrics and logs.
+A Tamagotchi for Grafana employees, featuring **Grot** as your virtual pet. 
+Keep Grot alive, watch him evolve, and observe his vital signs flowing into Grafana Cloud as OTLP metrics and logs.
 
-Built for [Grafana Labs Hackathon #16](https://github.com/grafana/hackathon-16-tamagrotchi).
+Built for [Grafana Labs Hackathon #16](https://devpost.team/grafana-bl/projects/14135).
 
 ---
 
@@ -23,11 +24,11 @@ Built for [Grafana Labs Hackathon #16](https://github.com/grafana/hackathon-16-t
 
 ---
 
-## What's Working
+## The App
 
 ### Grot's Life Cycle
 - 6 life stages: **Egg → Baby → Child → Teen → Adult → Senior**
-- Evolution triggered by age thresholds, with a 3-second "EVOLVING…" overlay and melody
+- Evolution triggered by age thresholds, with an "EVOLVING…" overlay and melody
 - **Evolution quality** (Excellent / Good / Tired) determined by accumulated care mistakes — affects which sprite set is shown
 
 ### Vitals
@@ -39,10 +40,10 @@ Built for [Grafana Labs Hackathon #16](https://github.com/grafana/hackathon-16-t
 ### Player Actions
 | Button | Action |
 |---|---|
-| A | Feed (+25 hunger) |
-| C | Play (+20 happiness) |
-| B | Discipline |
-| B (hold) | Give medicine (clears sick status) |
+| A | Previous Menu
+| B | Select
+| C | Next Menu |
+| B (when Idle) | Cycle through animations |
 | Gentle shake | Play / wake from sleep |
 | Hard shake | Dizzy (-5 happiness, status effect) |
 
@@ -79,7 +80,7 @@ All metrics and logs are sent via **OTLP/HTTP JSON** to Grafana Cloud on a confi
 
 **Logs** (`/v1/logs`): structured events including boot, hunger alerts, happiness alerts, feeding, playing, sickness, evolution, and death.
 
-The OTLP push runs on a background FreeRTOS task (Core 0) so the game loop is never blocked by network I/O. A small toast notification confirms each push.
+The OTLP push runs on a background FreeRTOS task (Core 0) so the game loop is never blocked by network I/O. A small notification confirms each push.
 
 ### UI Layout (240×280)
 ```
@@ -155,14 +156,12 @@ Copy `data/config.json.example` to `data/config.json` and fill in your credentia
   },
   "game": {
     "demo_speed": false,
-    "push_interval_s": 60,
+    "push_interval_s": 10,
     "buzzer": true,
     "flash_alerts": true
   }
 }
 ```
-
-`auth_b64` must be `Basic <raw_glc_token>` — Grafana Cloud OTLP accepts the raw token directly (do **not** base64-encode it again).
 
 Upload the filesystem image after editing: **PlatformIO → Upload Filesystem Image**.
 
@@ -218,9 +217,12 @@ python3 tools/png_to_lvgl.py src/sprites/grot-wave.png
 
 ## What's Left / Ideas
 
-- [ ] Touch screen interactions (currently unused)
-- [ ] Save/restore pet state to NVS across reboots
 - [ ] Mini-games for the play action
 - [ ] More sprite states (eating animation, sick animation)
 - [ ] Grafana dashboard template for the metrics
-- [ ] OTA firmware updates
+- [ ] OTA firmware and config updates
+
+
+## Contributing
+
+Using Visual Studio Code, the easiest way is to install the PlatformIO extension. You can then rely on the platform IO config in the repo to build monitor and flash the hardware
