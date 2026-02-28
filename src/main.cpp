@@ -17,6 +17,7 @@
 #include "game/evolution.h"
 #include "game/actions.h"
 #include "sprites/sprite_engine.h"
+#include "sprites/grot_frames.h"
 #include "wifi/wifi_manager.h"
 #include "telemetry/otlp_writer.h"
 #include "imu/imu_driver.h"
@@ -28,6 +29,24 @@
 // =============================================================================
 static PetState  g_pet;
 static AppConfig g_cfg;
+
+// =============================================================================
+// UI state machine
+// =============================================================================
+enum class UiMode : uint8_t {
+    IDLE,        // pet visible, no icon selected
+    NAVIGATING,  // icon bar active, A/C scroll, B select
+    SUB_STATUS,  // stats overlay, auto-close 4s or B
+    SUB_FEED,    // food choice overlay, A/C toggle, B execute
+    SUB_LIGHTS,  // lights confirm overlay, B=toggle A=cancel
+    SUB_DISMISS, // generic text overlay, any key or 2s auto-dismiss
+};
+
+static UiMode   g_ui_mode      = UiMode::IDLE;
+static MenuItem g_menu_item    = MenuItem::STATUS;
+static int      g_feed_choice  = 0;           // 0=Microchip, 1=SIN-wave
+static uint32_t g_sub_enter_ms = 0;
+static bool     g_sprite_test  = false;       // true while B-cycle test is active
 
 // =============================================================================
 // game_log() — strong override for the __attribute__((weak)) stub in
@@ -138,15 +157,175 @@ void loop() {
     // 7. Game tick (internally rate-limited to GAME_TICK_MS) ------------------
     game_engine_update(&g_pet);
 
-    // 8. Button events → player actions ---------------------------------------
-    if (!pet_is_dead(&g_pet)) {
+    // 8. UI state machine — icon menu navigation + action dispatch -------------
+    {
         ButtonEvent evt = buttons_get_event();
-        switch (evt) {
-        case ButtonEvent::A_PRESS: action_feed(&g_pet);       break;  // A = Feed
-        case ButtonEvent::C_PRESS: action_play(&g_pet);       break;  // C = Play
-        case ButtonEvent::B_PRESS: action_discipline(&g_pet); break;  // B = Discipline
-        case ButtonEvent::B_LONG:  action_medicine(&g_pet);   break;  // B (hold) = Medicine
-        default: break;
+
+        // Dead screen: B press restarts the pet
+        if (pet_is_dead(&g_pet)) {
+            if (evt == ButtonEvent::B_PRESS) {
+                pet_state_init(&g_pet);
+                game_engine_init(&g_pet);
+                _dead_shown = false;
+                ui_show_game();
+                ui_hide_overlay();
+                g_ui_mode = UiMode::IDLE;
+                ui_menu_set_selected(MenuItem::MENU_COUNT);
+                ui_set_hints("", "", "");
+            }
+        } else {
+            switch (g_ui_mode) {
+
+            // ------------------------------------------------------------------
+            case UiMode::IDLE:
+                // A or C wakes the icon bar; exit sprite test mode
+                if (evt == ButtonEvent::A_PRESS || evt == ButtonEvent::C_PRESS) {
+                    g_sprite_test = false;
+                    g_ui_mode = UiMode::NAVIGATING;
+                    ui_menu_set_selected(g_menu_item);
+                    ui_set_hints("[A] Prev", "[B] Select", "[C] Next");
+                }
+                // B cycles through sprite animation states (dev testing)
+                if (evt == ButtonEvent::B_PRESS) {
+                    g_sprite_test = true;
+                    sprite_engine_test_next();
+                }
+                break;
+
+            // ------------------------------------------------------------------
+            case UiMode::NAVIGATING: {
+                const int n = (int)MenuItem::MENU_COUNT;
+                if (evt == ButtonEvent::A_PRESS) {
+                    g_menu_item = (MenuItem)(((int)g_menu_item - 1 + n) % n);
+                    ui_menu_set_selected(g_menu_item);
+                } else if (evt == ButtonEvent::C_PRESS) {
+                    g_menu_item = (MenuItem)(((int)g_menu_item + 1) % n);
+                    ui_menu_set_selected(g_menu_item);
+                } else if (evt == ButtonEvent::B_PRESS) {
+                    // Activate selected icon
+                    switch (g_menu_item) {
+                    case MenuItem::STATUS:
+                        g_ui_mode      = UiMode::SUB_STATUS;
+                        g_sub_enter_ms = now;
+                        ui_show_overlay_status(&g_pet, battery_read_voltage());
+                        ui_set_hints("", "[B] Close", "");
+                        break;
+                    case MenuItem::FEED:
+                        g_ui_mode     = UiMode::SUB_FEED;
+                        g_feed_choice = 0;
+                        ui_show_overlay_feed(g_feed_choice);
+                        ui_set_hints("[A] Prev", "[B] Feed!", "[C] Next");
+                        break;
+                    case MenuItem::CLEAN:
+                        // No waste mechanic yet — show stub message
+                        g_ui_mode      = UiMode::SUB_DISMISS;
+                        g_sub_enter_ms = now;
+                        ui_show_overlay_text("Nothing to clean\n\nData stream is clear");
+                        ui_set_hints("", "[B] OK", "");
+                        break;
+                    case MenuItem::GAME:
+                        g_ui_mode      = UiMode::SUB_DISMISS;
+                        g_sub_enter_ms = now;
+                        ui_show_overlay_text("Mini-game\ncoming soon!");
+                        ui_set_hints("[A] Left", "", "[C] Right");
+                        break;
+                    case MenuItem::LIGHTS:
+                        g_ui_mode      = UiMode::SUB_LIGHTS;
+                        g_sub_enter_ms = now;
+                        ui_show_overlay_text(g_pet.isSleeping
+                            ? "Wake Grot up?\n\n[B] Wake  [A] Cancel"
+                            : "Put Grot to sleep?\n\n[B] Sleep  [A] Cancel");
+                        ui_set_hints("[A] Cancel", "[B] Confirm", "");
+                        break;
+                    case MenuItem::MEDICINE:
+                        action_medicine(&g_pet);
+                        g_ui_mode      = UiMode::SUB_DISMISS;
+                        g_sub_enter_ms = now;
+                        ui_show_overlay_text(g_pet.status == PetStatus::SICK
+                            ? "Medicine given!\nHealth restored"
+                            : "Medicine given");
+                        ui_set_hints("", "[B] OK", "");
+                        break;
+                    default: break;
+                    }
+                } else if (evt == ButtonEvent::B_LONG) {
+                    // Long-press B cancels navigation
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_hide_overlay();
+                    ui_set_hints("", "", "");
+                }
+                break;
+            }
+
+            // ------------------------------------------------------------------
+            case UiMode::SUB_STATUS:
+                // Auto-close after 4s or on B press
+                if (evt == ButtonEvent::B_PRESS ||
+                    (now - g_sub_enter_ms) >= 4000UL) {
+                    ui_hide_overlay();
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_set_hints("", "", "");
+                }
+                break;
+
+            // ------------------------------------------------------------------
+            case UiMode::SUB_FEED:
+                if (evt == ButtonEvent::A_PRESS || evt == ButtonEvent::C_PRESS) {
+                    g_feed_choice ^= 1;  // toggle 0↔1
+                    ui_show_overlay_feed(g_feed_choice);
+                } else if (evt == ButtonEvent::B_PRESS) {
+                    FoodType food = (g_feed_choice == 0)
+                                  ? FoodType::MICROCHIP
+                                  : FoodType::SIN_WAVE;
+                    action_feed(&g_pet, food);
+                    ui_hide_overlay();
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_set_hints("", "", "");
+                } else if (evt == ButtonEvent::B_LONG) {
+                    ui_hide_overlay();
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_set_hints("", "", "");
+                }
+                break;
+
+            // ------------------------------------------------------------------
+            case UiMode::SUB_LIGHTS:
+                if (evt == ButtonEvent::B_PRESS) {
+                    if (g_pet.isSleeping) {
+                        action_wake(&g_pet, rtc_get_hour());
+                    } else {
+                        g_pet.isSleeping = true;
+                        g_pet.status     = PetStatus::SLEEPING;
+                        game_log(9, "sleeping", "manual sleep via lights menu");
+                    }
+                    ui_hide_overlay();
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_set_hints("", "", "");
+                } else if (evt == ButtonEvent::A_PRESS || evt == ButtonEvent::B_LONG) {
+                    ui_hide_overlay();
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_set_hints("", "", "");
+                }
+                break;
+
+            // ------------------------------------------------------------------
+            case UiMode::SUB_DISMISS:
+                // Any button press or 2s auto-dismiss
+                if (evt != ButtonEvent::NONE ||
+                    (now - g_sub_enter_ms) >= 2000UL) {
+                    ui_hide_overlay();
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_set_hints("", "", "");
+                }
+                break;
+            }
         }
     }
 
@@ -199,9 +378,13 @@ void loop() {
     // 12. Refresh UI ----------------------------------------------------------
     ui_update_vitals(&g_pet);
     ui_update_header(&g_pet, wifi_manager_is_connected());
-    sprite_engine_set_state(g_pet.stage,
-                            game_engine_get_emotion(&g_pet),
-                            g_pet.quality);
+    // Skip sprite state update while the B-cycle dev test is active so the
+    // test state isn't immediately overwritten by the real pet state.
+    if (!g_sprite_test) {
+        sprite_engine_set_state(g_pet.stage,
+                                game_engine_get_emotion(&g_pet),
+                                g_pet.quality);
+    }
 
     // 13. Telemetry push on configured interval (non-blocking) ---------------
     uint32_t push_interval_ms = g_cfg.push_interval_s * 1000UL;

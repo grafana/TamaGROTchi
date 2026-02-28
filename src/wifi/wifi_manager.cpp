@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_sntp.h>
+#include <lwip/dns.h>
 
 extern void game_log(uint8_t level, const char* event, const char* msg);
 
@@ -19,6 +20,7 @@ void wifi_manager_init(const char* ssid, const char* password) {
     strlcpy(_pass, password, sizeof(_pass));
 
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);   // keep radio on — modem sleep drops DNS responses
     WiFi.begin(_ssid, _pass);
     _connectStartMs = millis();
     _state = WiFiState::CONNECTING;
@@ -28,6 +30,12 @@ void wifi_manager_init(const char* ssid, const char* password) {
 static void on_connected() {
     strlcpy(_ip_str, WiFi.localIP().toString().c_str(), sizeof(_ip_str));
     _state = WiFiState::CONNECTED;
+
+    // Pin Google DNS into LWIP slot 1 as a fallback — DHCP primary in slot 0
+    // is untouched. Prevents DNS going dark after reconnects or lease refresh.
+    ip_addr_t fallback_dns;
+    IP4_ADDR(&fallback_dns.u_addr.ip4, 8, 8, 8, 8);
+    dns_setserver(1, &fallback_dns);
 
     char msg[100];
     snprintf(msg, sizeof(msg), "ssid=%s | rssi=%d | ip=%s",

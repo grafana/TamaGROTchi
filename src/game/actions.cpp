@@ -16,19 +16,29 @@ static uint8_t clamp(int v) {
     return (uint8_t)v;
 }
 
-bool action_feed(PetState* p) {
+bool action_feed(PetState* p, FoodType food) {
     if (!is_interactive(p)) return false;
 
-    uint8_t before = p->hunger;
-    p->hunger = clamp((int)p->hunger + 25);
-    p->status = PetStatus::EATING;
-    p->statusStartMs = millis();
+    uint8_t hun_before = p->hunger;
+    uint8_t hap_before = p->happiness;
 
-    // Clear hunger alert
+    if (food == FoodType::MICROCHIP) {
+        p->hunger    = clamp((int)p->hunger    + 20);
+        p->happiness = clamp((int)p->happiness +  5);
+    } else {  // SIN_WAVE
+        p->hunger    = clamp((int)p->hunger    + 10);
+        p->happiness = clamp((int)p->happiness + 15);
+    }
+
+    p->status        = PetStatus::EATING;
+    p->statusStartMs = millis();
     p->hungerAlertSent = false;
 
-    char msg[60];
-    snprintf(msg, sizeof(msg), "hunger_before=%d | hunger_after=%d", before, p->hunger);
+    const char* food_name = (food == FoodType::MICROCHIP) ? "microchip" : "sin_wave";
+    char msg[80];
+    snprintf(msg, sizeof(msg),
+             "food=%s | hunger=%d->%d | happiness=%d->%d",
+             food_name, hun_before, p->hunger, hap_before, p->happiness);
     game_log(9 /*INFO*/, "fed", msg);
 
     buzzer_play_async(MELODY_FEED, MELODY_FEED_LEN);
