@@ -46,7 +46,7 @@ void evolution_advance(PetState* p) {
         p->stage  = LifeStage::DEAD;
 
         char msg[80];
-        snprintf(msg, sizeof(msg), "age_s=%lu | care_mistakes=%d | cause=old_age", p->ageSeconds, p->careMistakes);
+        snprintf(msg, sizeof(msg), "age_s=%u | care_mistakes=%d | cause=old_age", p->ageSeconds, p->careMistakes);
         game_log(17 /*ERROR*/, "death", msg);
         buzzer_play_async(MELODY_DEAD, MELODY_DEAD_LEN);
         return;
@@ -59,7 +59,7 @@ void evolution_advance(PetState* p) {
     static const char* quality_names[] = {"excellent", "good", "tired"};
 
     char msg[120];
-    snprintf(msg, sizeof(msg), "from=%s | to=%s | age_s=%lu | care_mistakes=%d | quality=%s",
+    snprintf(msg, sizeof(msg), "from=%s | to=%s | age_s=%u | care_mistakes=%d | quality=%s",
              life_stage_name(prev),
              life_stage_name(p->stage),
              p->ageSeconds,

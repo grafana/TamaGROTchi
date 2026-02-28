@@ -404,8 +404,8 @@ void ui_update_header(const PetState* p, bool wifi_connected) {
     uint32_t mins  = p->ageSeconds / 60;
     uint32_t hours = mins / 60;
     mins %= 60;
-    if (hours > 0) snprintf(age_buf, sizeof(age_buf), "%luh%lum", hours, mins);
-    else           snprintf(age_buf, sizeof(age_buf), "%lum", mins);
+    if (hours > 0) snprintf(age_buf, sizeof(age_buf), "%uh%um", hours, mins);
+    else           snprintf(age_buf, sizeof(age_buf), "%um", mins);
     lv_label_set_text(_lbl_age, age_buf);
 
     if (wifi_connected) {
@@ -508,13 +508,13 @@ void ui_show_overlay_feed(int choice) {
     overlay_set_line(2, choice == 0 ? "> Microchip " : "  Microchip ",
                      &lv_font_montserrat_12,
                      choice == 0 ? GRAFANA_ORANGE : lv_color_make(0x88, 0x88, 0x99));
-    overlay_set_line(3, choice == 0 ? "  +Hunger +5 Happy" : "  +Hunger +5 Happy",
+    overlay_set_line(3, "  +20 Hunger  +5 Happy",
                      &lv_font_montserrat_10, lv_color_make(0x77, 0x77, 0x88));
 
     overlay_set_line(5, choice == 1 ? "> SIN-wave  " : "  SIN-wave  ",
                      &lv_font_montserrat_12,
                      choice == 1 ? GRAFANA_ORANGE : lv_color_make(0x88, 0x88, 0x99));
-    overlay_set_line(6, choice == 1 ? "  +10 Hunger +Happy" : "  +10 Hunger +Happy",
+    overlay_set_line(6, "  +10 Hunger +15 Happy",
                      &lv_font_montserrat_10, lv_color_make(0x77, 0x77, 0x88));
 
     if (_overlay_panel) lv_obj_clear_flag(_overlay_panel, LV_OBJ_FLAG_HIDDEN);

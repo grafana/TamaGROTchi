@@ -88,7 +88,7 @@ void wifi_manager_update() {
                     if (!logged) {
                         logged = true;
                         char tbuf[32];
-                        struct tm* ti = localtime(&t);
+                        const struct tm* ti = localtime(&t);
                         strftime(tbuf, sizeof(tbuf), "%Y-%m-%dT%H:%M:%SZ", ti);
                         char msg[60];
                         snprintf(msg, sizeof(msg), "time=%s", tbuf);

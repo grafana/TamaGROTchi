@@ -124,7 +124,7 @@ static void check_death(PetState* p) {
         p->stage  = LifeStage::DEAD;
 
         char msg[100];
-        snprintf(msg, sizeof(msg), "age_s=%lu | care_mistakes=%d | cause=health_depleted",
+        snprintf(msg, sizeof(msg), "age_s=%u | care_mistakes=%d | cause=health_depleted",
                  p->ageSeconds, p->careMistakes);
         game_log(17 /*ERROR*/, "death", msg);
         buzzer_play_async(MELODY_DEAD, MELODY_DEAD_LEN);
@@ -136,7 +136,7 @@ static void check_sleep(PetState* p) {
     time_t t = time(nullptr);
     if (t < 1000000000L) return;  // time not set yet
 
-    struct tm* ti = localtime(&t);
+    const struct tm* ti = localtime(&t);
     uint8_t h = ti->tm_hour;
 
     if (!p->isSleeping) {

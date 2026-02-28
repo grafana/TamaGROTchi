@@ -252,7 +252,7 @@ static void telemetry_task(void*) {
         bool m_ok = do_push_metrics(&snap.pet, snap.accel_mag, snap.rssi, snap.battery_v);
         bool l_ok = do_flush_logs();
 
-        _last_push_ok  = m_ok;
+        _last_push_ok  = m_ok && l_ok;
         _push_complete = true;  // signal main loop to update UI
     }
 }
