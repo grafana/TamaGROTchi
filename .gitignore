@@ -5,6 +5,8 @@
 .vscode/ipch
 .DS_Store
 .claude/
+.venv/
 
 # Real config with credentials — use data/config.json.example instead
 data/config.json
+simulator/config.json

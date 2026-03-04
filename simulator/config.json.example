@@ -1,0 +1,9 @@
+{
+    "otlp_base":     "https://otlp-gateway-prod-us-east-0.grafana.net/otlp",
+    "auth":          "Basic glc_eyJ...",
+    "device_prefix": "sim",
+    "instances":     20,
+    "speed":         1.0,
+    "push_interval": 30,
+    "verbose":       false
+}
