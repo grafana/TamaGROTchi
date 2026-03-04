@@ -36,3 +36,18 @@ bool otlp_last_push_ok();
 
 // Buffer a log entry (up to 16 entries, thread-safe).
 void otlp_log(uint8_t severity_number, const char* event, const char* body);
+
+// Begin a new trace (call from Core 1 game loop before a user action).
+// Generates a new trace ID + root span, stores as active context so that
+// subsequent otlp_trace() calls during this action attach as child spans.
+// duration_ms=0 → root span stored with 0 and treated as 500 ms at flush.
+void otlp_trace_begin(const char* name, const char* body, uint32_t duration_ms = 0);
+
+// Clear the active trace context (call after the action completes).
+void otlp_trace_end();
+
+// Buffer a span (up to 8, thread-safe). If an active trace exists (from
+// otlp_trace_begin) this span is attached as a child of the root; otherwise
+// it becomes a standalone root span with its own trace ID.
+// duration_ms=0 defaults to 500 ms. Oldest span dropped when buffer is full.
+void otlp_trace(const char* name, const char* body, uint32_t duration_ms = 500);

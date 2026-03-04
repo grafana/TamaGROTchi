@@ -5,10 +5,13 @@
 #include <Arduino.h>
 #include <time.h>
 
-// Forward declaration for log emission (defined in main.cpp via otlp_writer)
-// We use a weak function so the engine compiles standalone too.
+// Forward declarations for telemetry (defined in main.cpp via otlp_writer).
+// Weak implementations allow the engine to compile standalone.
 __attribute__((weak)) void game_log(uint8_t level, const char* event, const char* msg) {
     Serial.printf("[%s] %s\n", event, msg);
+}
+__attribute__((weak)) void game_trace(const char* name, const char* body, uint32_t dur_ms) {
+    (void)name; (void)body; (void)dur_ms;
 }
 
 void game_engine_init(PetState* state) {
@@ -106,6 +109,7 @@ static void check_sickness(PetState* p, uint32_t now) {
             snprintf(msg, sizeof(msg), "health=%d | hunger_was=%d | happiness_was=%d",
                      p->health, p->hunger, p->happiness);
             game_log(13 /*WARN*/, "sick", msg);
+            game_trace("pet.sick", msg, 0);
             buzzer_play_async(MELODY_SICK, MELODY_SICK_LEN);
         }
     } else {
@@ -127,6 +131,7 @@ static void check_death(PetState* p) {
         snprintf(msg, sizeof(msg), "age_s=%u | care_mistakes=%d | cause=health_depleted",
                  p->ageSeconds, p->careMistakes);
         game_log(17 /*ERROR*/, "death", msg);
+        game_trace("pet.died", msg, 1000);
         buzzer_play_async(MELODY_DEAD, MELODY_DEAD_LEN);
     }
 }

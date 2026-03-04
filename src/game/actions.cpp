@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 extern void game_log(uint8_t level, const char* event, const char* msg);
+extern void game_trace(const char* name, const char* body, uint32_t dur_ms);
 
 static bool is_interactive(const PetState* p) {
     return p->status != PetStatus::DEAD &&
@@ -40,6 +41,7 @@ bool action_feed(PetState* p, FoodType food) {
              "food=%s | hunger=%d->%d | happiness=%d->%d",
              food_name, hun_before, p->hunger, hap_before, p->happiness);
     game_log(9 /*INFO*/, "fed", msg);
+    game_trace("pet.fed", msg, 0);
 
     buzzer_play_async(MELODY_FEED, MELODY_FEED_LEN);
     return true;
@@ -59,6 +61,7 @@ bool action_play(PetState* p) {
     char msg[60];
     snprintf(msg, sizeof(msg), "happiness_before=%d | happiness_after=%d", before, p->happiness);
     game_log(9 /*INFO*/, "played", msg);
+    game_trace("pet.played", msg, 0);
 
     buzzer_play_async(MELODY_HAPPY, MELODY_HAPPY_LEN);
     return true;
@@ -76,11 +79,13 @@ bool action_medicine(PetState* p) {
     snprintf(msg, sizeof(msg), "health_before=%d | health_after=%d | sick_cleared=%s",
              before, p->health, was_sick ? "true" : "false");
     game_log(9 /*INFO*/, "medicine", msg);
+    game_trace("pet.medicine", msg, 0);
 
     if (was_sick) {
         char rec_msg[40];
         snprintf(rec_msg, sizeof(rec_msg), "health=%d", p->health);
         game_log(9 /*INFO*/, "recovered", rec_msg);
+        game_trace("pet.recovered", rec_msg, 0);
     }
 
     buzzer_play_async(MELODY_MEDICINE, MELODY_MEDICINE_LEN);
@@ -97,6 +102,7 @@ bool action_discipline(PetState* p) {
     snprintf(msg, sizeof(msg), "discipline_before=%d | discipline_after=%d",
              before, p->disciplineScore);
     game_log(9 /*INFO*/, "discipline", msg);
+    game_trace("pet.discipline", msg, 0);
     return true;
 }
 
@@ -110,6 +116,7 @@ void action_dizzy(PetState* p, float accel_mag) {
     char msg[60];
     snprintf(msg, sizeof(msg), "accel_mag=%.1f | happiness_lost=5", (double)accel_mag);
     game_log(9 /*INFO*/, "shake_dizzy", msg);
+    game_trace("pet.shake_dizzy", msg, 2000);
 
     buzzer_play_async(MELODY_DIZZY, MELODY_DIZZY_LEN);
 }

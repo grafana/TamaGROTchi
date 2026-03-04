@@ -3,8 +3,9 @@
 #include "../buzzer/buzzer.h"
 #include <Arduino.h>
 
-// Forward declaration (defined weakly in game_engine.cpp)
+// Forward declarations (defined weakly in game_engine.cpp)
 extern void game_log(uint8_t level, const char* event, const char* msg);
+extern void game_trace(const char* name, const char* body, uint32_t dur_ms);
 
 // Age thresholds (seconds) — configured in config.h, demo-speed by default
 static const uint32_t THRESHOLDS[] = {
@@ -48,6 +49,7 @@ void evolution_advance(PetState* p) {
         char msg[80];
         snprintf(msg, sizeof(msg), "age_s=%u | care_mistakes=%d | cause=old_age", p->ageSeconds, p->careMistakes);
         game_log(17 /*ERROR*/, "death", msg);
+        game_trace("pet.died", msg, 1000);
         buzzer_play_async(MELODY_DEAD, MELODY_DEAD_LEN);
         return;
     }
@@ -66,6 +68,7 @@ void evolution_advance(PetState* p) {
              p->careMistakes,
              quality_names[static_cast<uint8_t>(p->quality)]);
     game_log(9 /*INFO*/, "evolved", msg);
+    game_trace("pet.evolved", msg, 2000);
 
     buzzer_play_async(MELODY_EVOLVE, MELODY_EVOLVE_LEN);
 }

@@ -49,12 +49,16 @@ static uint32_t g_sub_enter_ms = 0;
 static bool     g_sprite_test  = false;       // true while B-cycle test is active
 
 // =============================================================================
-// game_log() — strong override for the __attribute__((weak)) stub in
-// game_engine.cpp.  Routes all structured logs to Serial + OTLP buffer.
+// game_log() / game_trace() — strong overrides for the __attribute__((weak))
+// stubs in game_engine.cpp.  Routes telemetry to Serial + OTLP buffers.
 // =============================================================================
 void game_log(uint8_t level, const char* event, const char* msg) {
     Serial.printf("[%s] %s\n", event, msg);
     otlp_log(level, event, msg);
+}
+
+void game_trace(const char* name, const char* body, uint32_t dur_ms) {
+    otlp_trace(name, body, dur_ms);
 }
 
 // =============================================================================
@@ -237,15 +241,19 @@ void loop() {
                             : "Put Grot to sleep?\n\n[B] Sleep  [A] Cancel");
                         ui_set_hints("[A] Cancel", "[B] Confirm", "");
                         break;
-                    case MenuItem::MEDICINE:
+                    case MenuItem::MEDICINE: {
+                        bool was_sick = (g_pet.status == PetStatus::SICK);
+                        otlp_trace_begin("user.medicine", "action=medicine", 600);
                         action_medicine(&g_pet);
+                        otlp_trace_end();
                         g_ui_mode      = UiMode::SUB_DISMISS;
                         g_sub_enter_ms = now;
-                        ui_show_overlay_text(g_pet.status == PetStatus::SICK
+                        ui_show_overlay_text(was_sick
                             ? "Medicine given!\nHealth restored"
                             : "Medicine given");
                         ui_set_hints("", "[B] OK", "");
                         break;
+                    }
                     default: break;
                     }
                 } else if (evt == ButtonEvent::B_LONG) {
@@ -279,7 +287,10 @@ void loop() {
                     FoodType food = (g_feed_choice == 0)
                                   ? FoodType::MICROCHIP
                                   : FoodType::SIN_WAVE;
+                    otlp_trace_begin("user.feed",
+                        g_feed_choice == 0 ? "food=microchip" : "food=sin_wave", 600);
                     action_feed(&g_pet, food);
+                    otlp_trace_end();
                     ui_hide_overlay();
                     g_ui_mode = UiMode::IDLE;
                     ui_menu_set_selected(MenuItem::MENU_COUNT);
@@ -336,7 +347,11 @@ void loop() {
 
         if (shake == ShakeLevel::HARD) {
             // Hard shake → dizzy, lose 5 happiness
+            char shake_body[48];
+            snprintf(shake_body, sizeof(shake_body), "level=hard | accel_mag=%.2f", (double)mag);
+            otlp_trace_begin("sensor.shake", shake_body, 2000);
             action_dizzy(&g_pet, mag);
+            otlp_trace_end();
         } else {
             // Gentle shake
             if (g_pet.isSleeping) {
@@ -347,7 +362,12 @@ void loop() {
                 snprintf(msg, sizeof(msg),
                          "accel_mag=%.2f | action=play", (double)mag);
                 game_log(9, "shake_play", msg);
+                char shake_body[48];
+                snprintf(shake_body, sizeof(shake_body), "level=gentle | accel_mag=%.2f", (double)mag);
+                otlp_trace_begin("sensor.shake", shake_body, 1000);
+                game_trace("pet.shake_play", msg, 0);
                 action_play(&g_pet);
+                otlp_trace_end();
             }
         }
     }
@@ -365,7 +385,11 @@ void loop() {
     if (g_pet.status == PetStatus::EVOLVING &&
         (now - g_pet.statusStartMs) >= 3000UL) {
         ui_show_evolve_overlay(false);
+        char evo_body[32];
+        snprintf(evo_body, sizeof(evo_body), "from=%s", life_stage_name(g_pet.stage));
+        otlp_trace_begin("lifecycle.evolve", evo_body, 3000);
         evolution_advance(&g_pet);   // advances stage, computes quality, clears evolveReady
+        otlp_trace_end();
     }
 
     // 11. Death screen (shown once) -------------------------------------------
