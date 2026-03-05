@@ -66,6 +66,11 @@ extern const lv_image_dsc_t grot_thinks_2;
 extern const lv_image_dsc_t grot_thinks_3;
 extern const lv_image_dsc_t grot_thinks_4;
 
+// egg-shake.png — 3-frame egg shake (38×38 px): rest, tilt-left, tilt-right
+extern const lv_image_dsc_t egg_shake_0;
+extern const lv_image_dsc_t egg_shake_1;
+extern const lv_image_dsc_t egg_shake_2;
+
 // ---------------------------------------------------------------------------
 // No-op — sprites are statically initialised; kept for call-site compat.
 // ---------------------------------------------------------------------------

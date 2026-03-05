@@ -16,7 +16,7 @@
 
 // --- Egg ---
 static const lv_image_dsc_t* egg_idle[] = {
-    &grot_0, &grot_1, nullptr
+    &egg_shake_0, &egg_shake_1, &egg_shake_2, nullptr
 };
 
 // --- Baby ---

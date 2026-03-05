@@ -24,9 +24,15 @@ static char _game_id[32];
 // 45 prefixes × 45 suffixes = 2,025 combinations → ~9% collision chance with 20 instances
 static void generate_game_id(char* buf, size_t len) {
     static const char* const PREFIXES[] = {
-        "Loki", "Mimir", "Tempo", "Torkel", "Otel", "Prom",
-        "Pyro", "Alloy", "Grot", "Beyla", "Faro", "Tanka",
-        "Cortex", "Thanos", "Agent", "Oncall", "Sift", "Graph", "Panel", "Flux"
+        "Loki",   "Mimir",  "Tempo",  "Torkel", "Otel",    "Prom",
+        "Pyro",   "Alloy",  "Grot",   "Beyla",  "Faro",
+        "Kuma",   "Flux",   "Cortex", "Thanos", "Agent",
+        "Oncall", "Inca",   "Ruler",  "Sift",   "Grizzly",
+        "Nexus",  "Radar",  "Orbit",  "Nova",   "Atlas",
+        "Axon",   "Nimbus", "Blaze",  "Crest",  "Delta",
+        "Echo",   "Forge",  "Glint",  "Haven",  "Jolt",
+        "Kindle", "Lumen",  "Mochi",  "Nori",   "Quest",
+        "Relay",  "Scout",  "Turbo",  "Vega"
     };
     static const char* const SUFFIXES[] = {
         "tchi", "kins", "ito",  "bot",  "zu",  "mon", "ie",  "let", "y",
