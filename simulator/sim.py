@@ -398,6 +398,10 @@ def main() -> None:
             send_traces=send_traces,
             send_logs=send_logs,
         )
+        # Instance 0 is always named Beylazu
+        if i == 0:
+            inst.game_id = "Beylazu"
+            inst.otlp._game_id = "Beylazu"
         print(f"  [{i:02d}] {device_id} → game_id={inst.game_id}")
         instances.append(inst)
 
