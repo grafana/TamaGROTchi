@@ -24,6 +24,8 @@ Built for [Grafana Labs Hackathon #16](https://devpost.team/grafana-bl/projects/
 
 A printable case is included in `hardware/` (STL + 3MF).
 
+Instructions are available at [hardware/hardware-bom.md](hardware/hardware-bom.md)
+
 ---
 
 ## The App
