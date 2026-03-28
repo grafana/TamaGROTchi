@@ -23,8 +23,12 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Secret name.
+Secret name — uses existingSecret if provided, otherwise the chart-managed secret.
 */}}
 {{- define "tamagrotchi.secretName" -}}
+{{- if .Values.otlp.existingSecret -}}
+{{ .Values.otlp.existingSecret }}
+{{- else -}}
 {{ include "tamagrotchi.fullname" . }}-otlp
+{{- end }}
 {{- end }}

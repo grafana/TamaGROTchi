@@ -22,8 +22,11 @@ verbose: "false"
 noTraces: "false"
 noLogs: "false"
 
-# OTLP credentials — stored in a Kubernetes Secret
+# OTLP credentials — stored in a Kubernetes Secret.
+# Set existingSecret to use a pre-existing secret (e.g. from External Secrets)
+# and leave base/auth empty. The secret must have keys: otlp-base, otlp-auth.
 otlp:
+  existingSecret: ""
   base: ""   # e.g. https://otlp-gateway-prod-us-east-0.grafana.net/otlp
   auth: ""   # e.g. Basic glc_...
 
