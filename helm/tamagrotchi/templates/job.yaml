@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "tamagrotchi.fullname" . }}
+  labels:
+    {{- include "tamagrotchi.labels" . | nindent 4 }}
+spec:
+  # One completion per pet — each pod runs until the pet dies, then exits 0.
+  completions: {{ .Values.instances }}
+  parallelism: {{ .Values.instances }}
+  completionMode: Indexed
+  # Never restart completed/failed pods — dead pets stay dead.
+  template:
+    metadata:
+      labels:
+        {{- include "tamagrotchi.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: tamagrotchi
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: OTLP_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tamagrotchi.secretName" . }}
+                  key: otlp-base
+            - name: OTLP_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tamagrotchi.secretName" . }}
+                  key: otlp-auth
+            - name: DEVICE_PREFIX
+              value: {{ .Values.devicePrefix | quote }}
+            - name: SPEED
+              value: {{ .Values.speed | quote }}
+            - name: PUSH_INTERVAL
+              value: {{ .Values.pushInterval | quote }}
+            - name: VERBOSE
+              value: {{ .Values.verbose | quote }}
+            - name: NO_TRACES
+              value: {{ .Values.noTraces | quote }}
+            - name: NO_LOGS
+              value: {{ .Values.noLogs | quote }}
+            # Set automatically by Kubernetes for Indexed Jobs (0 … N-1)
+            - name: JOB_COMPLETION_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

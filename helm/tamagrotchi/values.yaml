@@ -1,0 +1,36 @@
+# Number of simultaneous pets. Each runs as one pod in an Indexed Job.
+instances: 5
+
+image:
+  repository: tamagrotchi-sim
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Device ID prefix — pods become {devicePrefix}-00 … {devicePrefix}-NN
+devicePrefix: sim
+
+# Simulation speed multiplier (2.0 = 2× faster)
+speed: "1.0"
+
+# OTLP push interval in seconds
+pushInterval: "30"
+
+# Set to "true" to enable verbose HTTP logging in each pod
+verbose: "false"
+
+# Set to "true" to disable traces / logs (saves Grafana Cloud quota)
+noTraces: "false"
+noLogs: "false"
+
+# OTLP credentials — stored in a Kubernetes Secret
+otlp:
+  base: ""   # e.g. https://otlp-gateway-prod-us-east-0.grafana.net/otlp
+  auth: ""   # e.g. Basic glc_...
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

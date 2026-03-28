@@ -1,0 +1,6 @@
+apiVersion: v2
+name: tamagrotchi
+description: Kubernetes simulator for TamaGROTchi — one pod per Grot virtual pet
+type: application
+version: 0.1.0
+appVersion: "1.0"
