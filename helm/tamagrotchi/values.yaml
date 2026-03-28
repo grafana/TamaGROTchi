@@ -2,7 +2,7 @@
 instances: 5
 
 image:
-  repository: tamagrotchi-sim
+  repository: ghcr.io/nedsbeds/tamagrotchi-sim
   tag: latest
   pullPolicy: IfNotPresent
 
