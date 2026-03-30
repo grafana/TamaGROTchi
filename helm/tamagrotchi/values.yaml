@@ -4,7 +4,7 @@ instances: 5
 image:
   repository: ghcr.io/nedsbeds/tamagrotchi-sim
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always  # Always pull so 'latest' stays current
 
 # Device ID prefix — pods become {devicePrefix}-00 … {devicePrefix}-NN
 devicePrefix: sim
