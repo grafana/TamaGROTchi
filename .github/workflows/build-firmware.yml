@@ -9,7 +9,6 @@ on:
       - "platformio.ini"
       - "partitions_16M.csv"
       - ".github/workflows/build-firmware.yml"
-  push:
     tags: ["v*"]
   pull_request:
     paths:
