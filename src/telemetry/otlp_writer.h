@@ -34,6 +34,13 @@ bool otlp_push_complete();
 // Returns true if the last completed push succeeded (HTTP 2xx).
 bool otlp_last_push_ok();
 
+// Returns the random Grafana-themed name generated at boot (e.g. "Lokitchi").
+const char* otlp_get_game_id();
+
+// Buffer a metric snapshot without WiFi (called every sample_interval_s).
+// Flushed as a multi-point OTLP payload on the next push.
+void otlp_sample_metrics(const PetState* p, float accel_mag, float battery_v);
+
 // Buffer a log entry (up to 16 entries, thread-safe).
 void otlp_log(uint8_t severity_number, const char* event, const char* body);
 

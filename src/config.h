@@ -54,9 +54,24 @@
 // --- LVGL draw buffer --------------------------------------------------------
 #define LV_BUF_LINES        40  // Lines per draw buffer (240×40×2 = 19.2KB each)
 
+// --- Backlight brightness (0-255) -------------------------------------------
+// Reducing from 255 saves meaningful current on the LED driver.
+// Normal: 150 (~60% duty) — still bright indoors.  Sleep: 30 — just visible.
+#define LCD_BL_NORMAL       150
+#define LCD_BL_SLEEP        30
+
+// --- Main-loop idle delay ---------------------------------------------------
+// A brief yield at the end of each loop() tick lets the RTOS put the CPU
+// into its automatic idle sleep between iterations.  10 ms still gives LVGL
+// 100 calls/s — well above the 50 ms move-timer cadence.
+#define LOOP_IDLE_MS        10
+
 // --- Game tick & telemetry ---------------------------------------------------
-#define GAME_TICK_MS        1000UL       // 1 second per game tick
-#define TELEMETRY_PUSH_INTERVAL_MS 30000UL  // Push every 30 s (overridden by config.json)
+#define GAME_TICK_MS               1000UL   // 1 second per game tick
+#define TELEMETRY_PUSH_INTERVAL_MS 60000UL  // Push every 60 s (overridden by config.json)
+#define TELEMETRY_SAMPLE_INTERVAL_MS 10000UL // Sample metrics every 10 s (overridden by sample_interval_s)
+#define METRIC_BATCH_CAP           12       // 12 × ~116 bytes ≈ 1.4 KB RAM
+#define WIFI_WAKE_TIMEOUT_MS       15000UL  // Give up waking if no connect in 15 s
 
 // --- Shake detection thresholds (g-force) ------------------------------------
 #define SHAKE_GENTLE_G      1.5f  // Gentle shake → play
@@ -72,6 +87,10 @@
 #define EVO_TEEN_TO_ADULT_S 1800
 #define EVO_ADULT_TO_SENIOR_S 5400
 #define EVO_SENIOR_LIFE_S   10800
+
+// --- P1 incident tuning ------------------------------------------------------
+#define P1_SPAWN_INTERVAL_S     60    // seconds of age between P1 spawns
+#define P1_HEALTH_DRAIN         1     // health lost per game tick while P1 is active
 
 // --- Vital stat tuning -------------------------------------------------------
 #define HUNGER_DECAY_PER_TICK    1   // -1/tick while awake

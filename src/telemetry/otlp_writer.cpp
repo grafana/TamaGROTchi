@@ -1,5 +1,6 @@
 #include "otlp_writer.h"
 #include "../config.h"
+#include "../wifi/wifi_manager.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -50,6 +51,21 @@ static void generate_game_id(char* buf, size_t len) {
     uint8_t si  = r2 % (sizeof(SUFFIXES) / sizeof(SUFFIXES[0]));
     snprintf(buf, len, "%s%s", PREFIXES[pi], SUFFIXES[si]);
 }
+
+// =============================================================================
+// Metric snapshot ring buffer — protected by _log_mutex (shared)
+// Accumulates samples between WiFi wake windows so each push carries N points.
+// =============================================================================
+struct MetricSnapshot {
+    uint8_t  hunger, happiness, health;
+    uint8_t  stage, careMistakes, disciplineScore;
+    uint32_t ageSeconds;
+    float    accel_mag;
+    float    battery_v;
+    uint64_t ts_ns;
+};
+static MetricSnapshot _metric_buf[METRIC_BATCH_CAP];
+static uint8_t        _metric_count = 0;
 
 // =============================================================================
 // Log buffer — protected by _log_mutex
@@ -131,26 +147,63 @@ static void add_resource_attrs(JsonObject& resource) {
     add_attr("device",            _device_id);
 }
 
-static void add_gauge_metric(JsonArray& metrics, const char* name,
-                             int64_t value, uint64_t ts_ns) {
-    JsonObject m = metrics.add<JsonObject>();
-    m["name"] = name;
-    JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+// Add a single data point to an existing gauge metric object's dataPoints array.
+static void add_data_point(JsonArray& dp, int64_t value, uint64_t ts_ns) {
     JsonObject d = dp.add<JsonObject>();
     d["asInt"] = value;
-
     char ts_str[24];
     snprintf(ts_str, sizeof(ts_str), "%llu", (unsigned long long)ts_ns);
     d["timeUnixNano"] = ts_str;
 }
 
+// Add a gauge metric with a single data point (used for RSSI which is WiFi-live only).
+static void add_gauge_metric(JsonArray& metrics, const char* name,
+                             int64_t value, uint64_t ts_ns) {
+    JsonObject m = metrics.add<JsonObject>();
+    m["name"] = name;
+    JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+    add_data_point(dp, value, ts_ns);
+}
+
 // =============================================================================
 // Metrics push (called from background task only)
+// Flushes the MetricSnapshot ring buffer as multi-point gauges, then adds the
+// current RSSI as a single live point.  Falls back to _snapshot if buffer empty.
 // =============================================================================
 static bool do_push_metrics(const PetState* p, float accel_mag, int rssi, float battery_v) {
     if (WiFi.status() != WL_CONNECTED) return false;
 
-    uint64_t ts = now_ns();
+    // Snapshot metric buffer under mutex
+    MetricSnapshot snap[METRIC_BATCH_CAP];
+    uint8_t count = 0;
+    if (_log_mutex) {
+        xSemaphoreTake(_log_mutex, portMAX_DELAY);
+        count = _metric_count;
+        memcpy(snap, _metric_buf, sizeof(MetricSnapshot) * count);
+        _metric_count = 0;
+        xSemaphoreGive(_log_mutex);
+    } else {
+        count = _metric_count;
+        memcpy(snap, _metric_buf, sizeof(MetricSnapshot) * count);
+        _metric_count = 0;
+    }
+
+    // Fallback: use current snapshot as a single data point if buffer is empty
+    uint64_t ts_now = now_ns();
+    if (count == 0) {
+        MetricSnapshot& s = snap[0];
+        s.hunger         = p->hunger;
+        s.happiness      = p->happiness;
+        s.health         = p->health;
+        s.stage          = (uint8_t)p->stage;
+        s.careMistakes   = p->careMistakes;
+        s.disciplineScore= p->disciplineScore;
+        s.ageSeconds     = p->ageSeconds;
+        s.accel_mag      = accel_mag;
+        s.battery_v      = battery_v;
+        s.ts_ns          = ts_now;
+        count = 1;
+    }
 
     JsonDocument doc;
     JsonArray rm = doc["resourceMetrics"].to<JsonArray>();
@@ -164,16 +217,47 @@ static bool do_push_metrics(const PetState* p, float accel_mag, int rssi, float 
     scope["scope"]["name"] = "tamagrotchi";
 
     JsonArray metrics = scope["metrics"].to<JsonArray>();
-    add_gauge_metric(metrics, "tamagrotchi.stage",         (int64_t)p->stage,  ts);  // EGG=0…DEAD=6
-    add_gauge_metric(metrics, "tamagrotchi.hunger",        p->hunger,          ts);
-    add_gauge_metric(metrics, "tamagrotchi.happiness",     p->happiness,       ts);
-    add_gauge_metric(metrics, "tamagrotchi.health",        p->health,          ts);
-    add_gauge_metric(metrics, "tamagrotchi.age_s",         p->ageSeconds,      ts);
-    add_gauge_metric(metrics, "tamagrotchi.care_mistakes", p->careMistakes,    ts);
-    add_gauge_metric(metrics, "tamagrotchi.discipline",    p->disciplineScore, ts);
-    add_gauge_metric(metrics, "tamagrotchi.wifi_rssi",     rssi,               ts);
-    add_gauge_metric(metrics, "tamagrotchi.imu_accel_mag", (int64_t)(accel_mag * 100), ts);
-    add_gauge_metric(metrics, "tamagrotchi.battery_mv",    (int64_t)(battery_v * 1000), ts);
+
+    // Build one gauge per metric, each with N data points from the ring buffer
+    // stage
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.stage";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, snap[i].stage, snap[i].ts_ns); }
+    // hunger
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.hunger";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, snap[i].hunger, snap[i].ts_ns); }
+    // happiness
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.happiness";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, snap[i].happiness, snap[i].ts_ns); }
+    // health
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.health";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, snap[i].health, snap[i].ts_ns); }
+    // age_s
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.age_s";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, snap[i].ageSeconds, snap[i].ts_ns); }
+    // care_mistakes
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.care_mistakes";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, snap[i].careMistakes, snap[i].ts_ns); }
+    // discipline
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.discipline";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, snap[i].disciplineScore, snap[i].ts_ns); }
+    // imu_accel_mag (×100 for integer representation)
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.imu_accel_mag";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, (int64_t)(snap[i].accel_mag * 100), snap[i].ts_ns); }
+    // battery_mv (×1000)
+    { JsonObject m = metrics.add<JsonObject>(); m["name"] = "tamagrotchi.battery_mv";
+      JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
+      for (uint8_t i = 0; i < count; i++) add_data_point(dp, (int64_t)(snap[i].battery_v * 1000), snap[i].ts_ns); }
+
+    // RSSI is only valid while WiFi is on — single current-time point
+    add_gauge_metric(metrics, "tamagrotchi.wifi_rssi", rssi, ts_now);
 
     String payload;
     serializeJson(doc, payload);
@@ -188,7 +272,7 @@ static bool do_push_metrics(const PetState* p, float accel_mag, int rssi, float 
     http.end();
 
     bool ok = (code >= 200 && code < 300);
-    if (ok) Serial.printf("[otlp] metrics ok: %d\n", code);
+    if (ok) Serial.printf("[otlp] metrics ok (%d pts): %d\n", count, code);
     else    Serial.printf("[otlp] metrics FAIL: %d\n", code);
     return ok;
 }
@@ -375,8 +459,15 @@ static bool do_flush_traces() {
 // =============================================================================
 static void telemetry_task(void*) {
     for (;;) {
-        // Block until the main loop signals a push is due
-        xSemaphoreTake(_push_sem, portMAX_DELAY);
+        // Execute any pending WiFi radio operation (disconnect/begin) on Core 0.
+        // This keeps WiFi.begin()/disconnect() off Core 1 so buttons stay responsive.
+        wifi_manager_exec_pending();
+
+        // Block for up to 100 ms waiting for a push signal, then loop to re-check
+        // pending WiFi ops. portMAX_DELAY would starve the exec_pending poll.
+        if (xSemaphoreTake(_push_sem, pdMS_TO_TICKS(100)) != pdTRUE) {
+            continue;  // timeout — go back and check exec_pending again
+        }
 
         // Local copy of snapshot — safe because the semaphore Give on Core 1
         // acts as a memory barrier before the Take here on Core 0
@@ -389,6 +480,32 @@ static void telemetry_task(void*) {
         _last_push_ok  = m_ok && l_ok && t_ok;
         _push_complete = true;  // signal main loop to update UI
     }
+}
+
+// =============================================================================
+// otlp_sample_metrics — called from Core 1 every sample_interval_s.
+// Buffers a snapshot into the ring buffer without needing WiFi.
+// Thread-safe via _log_mutex.
+// =============================================================================
+void otlp_sample_metrics(const PetState* p, float accel_mag, float battery_v) {
+    if (_log_mutex) xSemaphoreTake(_log_mutex, portMAX_DELAY);
+    if (_metric_count >= METRIC_BATCH_CAP) {
+        memmove(&_metric_buf[0], &_metric_buf[1],
+                sizeof(MetricSnapshot) * (METRIC_BATCH_CAP - 1));
+        _metric_count = METRIC_BATCH_CAP - 1;
+    }
+    MetricSnapshot& s = _metric_buf[_metric_count++];
+    s.hunger          = p->hunger;
+    s.happiness       = p->happiness;
+    s.health          = p->health;
+    s.stage           = (uint8_t)p->stage;
+    s.careMistakes    = p->careMistakes;
+    s.disciplineScore = p->disciplineScore;
+    s.ageSeconds      = p->ageSeconds;
+    s.accel_mag       = accel_mag;
+    s.battery_v       = battery_v;
+    s.ts_ns           = now_ns();
+    if (_log_mutex) xSemaphoreGive(_log_mutex);
 }
 
 // =============================================================================
@@ -444,6 +561,8 @@ bool otlp_push_complete() {
 bool otlp_last_push_ok() {
     return _last_push_ok;
 }
+
+const char* otlp_get_game_id() { return _game_id; }
 
 void otlp_log(uint8_t severity_number, const char* event, const char* body) {
     if (_log_mutex) xSemaphoreTake(_log_mutex, portMAX_DELAY);

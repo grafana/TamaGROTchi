@@ -29,3 +29,7 @@ void action_dizzy(PetState* p, float accel_mag);
 // Wake pet from sleep (e.g. from gentle shake)
 // counts as care mistake if before wakeHour
 void action_wake(PetState* p, uint8_t current_hour);
+
+// Resolve the P1 incident: clears hasP1, +10 health, schedules next spawn.
+// Returns false if there is no active P1 or the pet is dead/evolving.
+bool action_clean(PetState* p);

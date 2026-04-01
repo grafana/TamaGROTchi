@@ -30,6 +30,10 @@ void pet_state_init(PetState* p) {
     p->alertStartMs       = 0;
     p->hungerAlertSent    = false;
     p->happinessAlertSent = false;
+
+    p->hasP1              = false;
+    p->nextP1S            = P1_SPAWN_INTERVAL_S;
+    p->p1AlertSent        = false;
 }
 
 const char* life_stage_name(LifeStage s) {

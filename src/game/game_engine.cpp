@@ -122,6 +122,29 @@ static void drain_sick_health(PetState* p) {
     p->health = clamp_stat((int)p->health - SICK_HEALTH_DECAY);
 }
 
+static void check_p1(PetState* p) {
+    if (p->stage == LifeStage::EGG) return;  // eggs don't get P1s
+
+    // Fire a new P1 if it's time
+    if (!p->hasP1 && p->ageSeconds >= p->nextP1S) {
+        p->hasP1       = true;
+        p->p1AlertSent = false;
+        game_log(13 /*WARN*/, "p1_fired", "p1_incident_active");
+        buzzer_play_async(MELODY_ALERT, MELODY_ALERT_LEN);
+    }
+
+    // Drain health every tick while P1 is active
+    if (p->hasP1) {
+        p->health = clamp_stat((int)p->health - P1_HEALTH_DRAIN);
+        if (!p->p1AlertSent) {
+            p->p1AlertSent = true;
+            char msg[60];
+            snprintf(msg, sizeof(msg), "health=%d | age_s=%lu", p->health, (unsigned long)p->ageSeconds);
+            game_log(13 /*WARN*/, "p1_drain", msg);
+        }
+    }
+}
+
 static void check_death(PetState* p) {
     if (p->health == 0 && p->status != PetStatus::DEAD) {
         p->status = PetStatus::DEAD;
@@ -205,6 +228,9 @@ bool game_engine_update(PetState* state) {
 
     // Drain health when sick
     if (state->status == PetStatus::SICK) drain_sick_health(state);
+
+    // P1 spawning + health drain (always ticked, regardless of pet status)
+    if (state->status != PetStatus::DEAD) check_p1(state);
 
     // State checks (only when not in a special status)
     if (state->status != PetStatus::EVOLVING &&

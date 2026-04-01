@@ -67,6 +67,9 @@ static lv_obj_t* _overlay_lbl[OVERLAY_LINES];
 // Evolve overlay
 static lv_obj_t*  _lbl_evolve   = nullptr;
 
+// P1 incident indicator — shown in sprite zone when hasP1 is true
+static lv_obj_t*  _lbl_p1       = nullptr;
+
 // Push indicator — animates the WiFi symbol in the icon bar:
 //   phase 1 (immediate): LV_SYMBOL_UP in orange  (upload fired)
 //   phase 2 (400 ms):    LV_SYMBOL_UP in green   (success only)
@@ -267,6 +270,21 @@ static void build_game_screen() {
     }
     lv_obj_add_flag(_overlay_panel, LV_OBJ_FLAG_HIDDEN);
 
+    // P1 incident indicator — bottom-right of sprite zone, hidden by default
+    _lbl_p1 = lv_label_create(sprite_zone);
+    lv_label_set_text(_lbl_p1, "  !! P1 !!  ");
+    lv_obj_set_style_text_font(_lbl_p1, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(_lbl_p1, lv_color_make(0xFF, 0x20, 0x20), 0);  // alert red
+    lv_obj_set_style_bg_color(_lbl_p1, lv_color_make(0x1A, 0x00, 0x00), 0);
+    lv_obj_set_style_bg_opa(_lbl_p1, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(_lbl_p1, lv_color_make(0xFF, 0x20, 0x20), 0);
+    lv_obj_set_style_border_width(_lbl_p1, 1, 0);
+    lv_obj_set_style_pad_hor(_lbl_p1, 6, 0);
+    lv_obj_set_style_pad_ver(_lbl_p1, 3, 0);
+    lv_obj_set_style_radius(_lbl_p1, 4, 0);
+    lv_obj_align(_lbl_p1, LV_ALIGN_BOTTOM_RIGHT, -8, -8);
+    lv_obj_add_flag(_lbl_p1, LV_OBJ_FLAG_HIDDEN);
+
     // -------------------------------------------------------------------------
     // Vitals bars (y=186, h=22)
     // -------------------------------------------------------------------------
@@ -395,6 +413,18 @@ void ui_update_vitals(const PetState* p) {
     lv_label_set_text(_lbl_hap_pct, buf);
     snprintf(buf, sizeof(buf), "%d%%", p->health);
     lv_label_set_text(_lbl_hlt_pct, buf);
+
+    // Show/hide P1 incident indicator
+    if (_lbl_p1) {
+        if (p->hasP1) lv_obj_clear_flag(_lbl_p1, LV_OBJ_FLAG_HIDDEN);
+        else          lv_obj_add_flag(_lbl_p1,   LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // Flash the CLEAN icon red when P1 is active, dim otherwise
+    if (_icon_lbl[(int)MenuItem::CLEAN]) {
+        lv_obj_set_style_text_color(_icon_lbl[(int)MenuItem::CLEAN],
+            p->hasP1 ? lv_color_make(0xFF, 0x20, 0x20) : COL_ICON_DIM, 0);
+    }
 }
 
 void ui_update_header(const PetState* p, bool wifi_connected) {
@@ -466,11 +496,17 @@ static void overlay_set_line(int idx, const char* text,
 // =============================================================================
 // Public API — overlays
 // =============================================================================
-void ui_show_overlay_status(const PetState* p, float battery_v) {
+void ui_show_overlay_status(const PetState* p, float battery_v, const char* name) {
     overlay_clear_lines();
 
     char buf[40];
-    overlay_set_line(0, "-- Status --", &lv_font_montserrat_12, GRAFANA_ORANGE);
+    // Line 0: Grot's unique name
+    if (name && name[0]) {
+        snprintf(buf, sizeof(buf), "-- %s --", name);
+        overlay_set_line(0, buf, &lv_font_montserrat_12, GRAFANA_ORANGE);
+    } else {
+        overlay_set_line(0, "-- Status --", &lv_font_montserrat_12, GRAFANA_ORANGE);
+    }
 
     snprintf(buf, sizeof(buf), "Hunger:    %d%%", p->hunger);
     overlay_set_line(1, buf, &lv_font_montserrat_12, COL_HUNGER);
@@ -495,6 +531,10 @@ void ui_show_overlay_status(const PetState* p, float battery_v) {
 
     snprintf(buf, sizeof(buf), "Battery:   %.2fV", battery_v);
     overlay_set_line(6, buf, &lv_font_montserrat_12, lv_color_make(0xAA, 0xAA, 0xBB));
+
+    if (p->hasP1)
+        overlay_set_line(7, "!! P1 Firing !!", &lv_font_montserrat_12,
+                         lv_color_make(0xFF, 0x20, 0x20));
 
     if (_overlay_panel) lv_obj_clear_flag(_overlay_panel, LV_OBJ_FLAG_HIDDEN);
 }

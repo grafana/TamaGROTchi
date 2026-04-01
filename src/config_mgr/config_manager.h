@@ -13,8 +13,9 @@ struct AppConfig {
     char otlp_base[256];   // e.g. "https://otlp-gateway-prod-eu-west-0.grafana.net/otlp"
     char auth_b64[256];    // pre-encoded "Basic <base64(instanceId:apiKey)>"
     char device_id[32];    // used as OTLP resource attribute
-    bool demo_speed;           // true = fast evolution for demo
-    uint32_t push_interval_s;  // telemetry push cadence in seconds
+    bool demo_speed;             // true = fast evolution for demo
+    uint32_t push_interval_s;   // telemetry push cadence in seconds
+    uint32_t sample_interval_s; // how often to snapshot metrics into RAM buffer
     bool buzzer_enabled;       // false = mute all sounds
     bool flash_alerts;         // true = flash backlight whenever a melody plays
 };

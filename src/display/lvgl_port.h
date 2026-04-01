@@ -12,5 +12,8 @@ void lvgl_port_tick();
 // Driven automatically by lvgl_port_tick() — no extra loop() call needed.
 void display_alert_flash(uint8_t flashes);
 
+// Set backlight brightness (0–255). Call after lvgl_port_init().
+void lvgl_port_set_brightness(uint8_t b);
+
 // Access the LVGL display handle (e.g. to set theme).
 lv_display_t* lvgl_get_disp();

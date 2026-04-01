@@ -121,6 +121,26 @@ void action_dizzy(PetState* p, float accel_mag) {
     buzzer_play_async(MELODY_DIZZY, MELODY_DIZZY_LEN);
 }
 
+bool action_clean(PetState* p) {
+    if (!is_interactive(p)) return false;
+    if (!p->hasP1) return false;
+
+    uint8_t before   = p->health;
+    p->hasP1         = false;
+    p->nextP1S       = p->ageSeconds + P1_SPAWN_INTERVAL_S;
+    p->p1AlertSent   = false;
+    p->health        = clamp((int)p->health + 10);
+
+    char msg[80];
+    snprintf(msg, sizeof(msg), "health=%d->%d | next_p1_s=%lu",
+             before, p->health, (unsigned long)p->nextP1S);
+    game_log(9 /*INFO*/, "p1_resolved", msg);
+    game_trace("pet.cleaned", msg, 0);
+
+    buzzer_play_async(MELODY_HAPPY, MELODY_HAPPY_LEN);
+    return true;
+}
+
 void action_wake(PetState* p, uint8_t current_hour) {
     p->isSleeping = false;
     p->status     = PetStatus::IDLE;

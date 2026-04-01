@@ -40,7 +40,7 @@ void lvgl_port_init() {
     // Bring up display
     gfx.init();
     gfx.setRotation(0);
-    gfx.setBrightness(220);
+    gfx.setBrightness(LCD_BL_NORMAL);
     gfx.fillScreen(TFT_BLACK);
 
     // Initialise LVGL
@@ -96,9 +96,17 @@ void lvgl_port_tick() {
             _flash_remain--;
             _flash_next_ms = now + 80;
             if (_flash_remain == 0) {
-                gfx.setBrightness(220);  // restore normal brightness
+                gfx.setBrightness(LCD_BL_NORMAL);  // restore normal brightness
             }
         }
+    }
+}
+
+void lvgl_port_set_brightness(uint8_t b) {
+    // Don't override brightness mid-flash — the flash state machine restores
+    // LCD_BL_NORMAL itself; the caller should re-apply after the flash ends.
+    if (_flash_remain == 0) {
+        gfx.setBrightness(b);
     }
 }
 

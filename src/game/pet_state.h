@@ -81,6 +81,11 @@ struct PetState {
     uint32_t  alertStartMs;
     bool      hungerAlertSent;
     bool      happinessAlertSent;
+
+    // ---- P1 incident ----
+    bool      hasP1;            // P1 incident is active
+    uint32_t  nextP1S;          // ageSeconds when next P1 spawns
+    bool      p1AlertSent;      // log event fired for this P1
 };
 
 // Seed a fresh pet state (newborn egg)

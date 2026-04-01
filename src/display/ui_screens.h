@@ -39,7 +39,7 @@ void ui_update_header(const PetState* p, bool wifi_connected);
 void ui_menu_set_selected(MenuItem item);
 
 // Overlays rendered inside the sprite zone
-void ui_show_overlay_status(const PetState* p, float battery_v);
+void ui_show_overlay_status(const PetState* p, float battery_v, const char* name);
 void ui_show_overlay_feed(int choice);      // choice: 0=Microchip, 1=SIN-wave
 void ui_show_overlay_text(const char* msg); // generic message (Clean result, Game stub, etc.)
 void ui_hide_overlay();

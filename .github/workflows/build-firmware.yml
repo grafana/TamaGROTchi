@@ -1,0 +1,48 @@
+name: Build Firmware
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "platformio.ini"
+      - "partitions_16M.csv"
+  pull_request:
+    paths:
+      - "src/**"
+      - "include/**"
+      - "platformio.ini"
+      - "partitions_16M.csv"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: platformio-${{ hashFiles('platformio.ini') }}
+          restore-keys: platformio-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build firmware
+        run: pio run -e lolin_s3_mini_1_69
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
+          retention-days: 30

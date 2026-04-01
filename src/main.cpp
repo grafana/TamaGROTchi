@@ -16,6 +16,7 @@
 #include "game/game_engine.h"
 #include "game/evolution.h"
 #include "game/actions.h"
+#include "game/mini_game_metric_catcher.h"
 #include "sprites/sprite_engine.h"
 #include "sprites/grot_frames.h"
 #include "wifi/wifi_manager.h"
@@ -40,6 +41,7 @@ enum class UiMode : uint8_t {
     SUB_FEED,    // food choice overlay, A/C toggle, B execute
     SUB_LIGHTS,  // lights confirm overlay, B=toggle A=cancel
     SUB_DISMISS, // generic text overlay, any key or 2s auto-dismiss
+    MINI_GAME,   // metric catcher mini-game running
 };
 
 static UiMode   g_ui_mode      = UiMode::IDLE;
@@ -65,7 +67,11 @@ void game_trace(const char* name, const char* body, uint32_t dur_ms) {
 // setup()
 // =============================================================================
 void setup() {
-    // 0. Power latch — GPIO41 HIGH keeps the board on; GPIO40 is a sense input
+    // 0. CPU frequency — 80 MHz is sufficient for a 1 Hz game loop.
+    //    APB clock stays at 80 MHz at this setting so SPI/I2C are unaffected.
+    setCpuFrequencyMhz(80);
+
+    // 0b. Power latch — GPIO41 HIGH keeps the board on; GPIO40 is a sense input
     pinMode(PIN_SYS_EN,  OUTPUT);
     digitalWrite(PIN_SYS_EN,  HIGH);
     pinMode(PIN_SYS_OUT, INPUT);   // power sense — do NOT drive this pin
@@ -123,9 +129,14 @@ void setup() {
 // =============================================================================
 // loop()
 // =============================================================================
-static uint32_t _last_push_ms = 0;
-static bool     _rtc_synced   = false;   // NTP → RTC written once
-static bool     _dead_shown   = false;   // death screen shown once
+enum class TelemetryPhase : uint8_t { WAKING, PUSHING, SLEEPING, ASLEEP };
+static TelemetryPhase _telem_phase   = TelemetryPhase::WAKING;  // start connected for NTP
+static uint32_t _last_push_ms        = 0;
+static uint32_t _last_sample_ms      = 0;
+static uint32_t _wake_start_ms       = 0;
+static bool     _rtc_synced          = false;   // NTP → RTC written once
+static bool     _dead_shown          = false;   // death screen shown once
+static bool     _was_sleeping        = false;   // tracks last pet sleep state for backlight
 
 void loop() {
     uint32_t now = millis();
@@ -164,6 +175,14 @@ void loop() {
     // 8. UI state machine — icon menu navigation + action dispatch -------------
     {
         ButtonEvent evt = buttons_get_event();
+
+        // Stop the mini-game immediately if the pet dies mid-game
+        if (pet_is_dead(&g_pet) && g_ui_mode == UiMode::MINI_GAME) {
+            metric_catcher_stop();
+            g_ui_mode = UiMode::IDLE;
+            ui_menu_set_selected(MenuItem::MENU_COUNT);
+            ui_set_hints("", "", "");
+        }
 
         // Dead screen: B press restarts the pet
         if (pet_is_dead(&g_pet)) {
@@ -211,7 +230,8 @@ void loop() {
                     case MenuItem::STATUS:
                         g_ui_mode      = UiMode::SUB_STATUS;
                         g_sub_enter_ms = now;
-                        ui_show_overlay_status(&g_pet, battery_read_voltage());
+                        ui_show_overlay_status(&g_pet, battery_read_voltage(),
+                                               otlp_get_game_id());
                         ui_set_hints("", "[B] Close", "");
                         break;
                     case MenuItem::FEED:
@@ -221,17 +241,25 @@ void loop() {
                         ui_set_hints("[A] Prev", "[B] Feed!", "[C] Next");
                         break;
                     case MenuItem::CLEAN:
-                        // No waste mechanic yet — show stub message
-                        g_ui_mode      = UiMode::SUB_DISMISS;
-                        g_sub_enter_ms = now;
-                        ui_show_overlay_text("Nothing to clean\n\nData stream is clear");
+                        if (g_pet.hasP1) {
+                            otlp_trace_begin("user.clean", "action=clean", 600);
+                            action_clean(&g_pet);
+                            otlp_trace_end();
+                            g_ui_mode      = UiMode::SUB_DISMISS;
+                            g_sub_enter_ms = now;
+                            ui_show_overlay_text("P1 Resolved!\n\nHealth +10");
+                        } else {
+                            g_ui_mode      = UiMode::SUB_DISMISS;
+                            g_sub_enter_ms = now;
+                            ui_show_overlay_text("Nothing to clean\n\nData stream is clear");
+                        }
                         ui_set_hints("", "[B] OK", "");
                         break;
                     case MenuItem::GAME:
-                        g_ui_mode      = UiMode::SUB_DISMISS;
-                        g_sub_enter_ms = now;
-                        ui_show_overlay_text("Mini-game\ncoming soon!");
-                        ui_set_hints("[A] Left", "", "[C] Right");
+                        metric_catcher_start(&g_pet);
+                        g_ui_mode = UiMode::MINI_GAME;
+                        ui_menu_set_selected(MenuItem::MENU_COUNT);
+                        ui_set_hints("[A] Left", "[B] Quit", "[C] Right");
                         break;
                     case MenuItem::LIGHTS:
                         g_ui_mode      = UiMode::SUB_LIGHTS;
@@ -336,6 +364,16 @@ void loop() {
                     ui_set_hints("", "", "");
                 }
                 break;
+
+            // ------------------------------------------------------------------
+            case UiMode::MINI_GAME:
+                metric_catcher_handle_input(evt);
+                if (!metric_catcher_is_running()) {
+                    g_ui_mode = UiMode::IDLE;
+                    ui_menu_set_selected(MenuItem::MENU_COUNT);
+                    ui_set_hints("", "", "");
+                }
+                break;
             }
         }
     }
@@ -402,25 +440,74 @@ void loop() {
     // 12. Refresh UI ----------------------------------------------------------
     ui_update_vitals(&g_pet);
     ui_update_header(&g_pet, wifi_manager_is_connected());
-    // Skip sprite state update while the B-cycle dev test is active so the
-    // test state isn't immediately overwritten by the real pet state.
-    if (!g_sprite_test) {
+    // Skip sprite state update while the B-cycle dev test is active or the
+    // mini-game is running (both manage the sprite state themselves).
+    if (!g_sprite_test && g_ui_mode != UiMode::MINI_GAME) {
         sprite_engine_set_state(g_pet.stage,
                                 game_engine_get_emotion(&g_pet),
                                 g_pet.quality);
     }
 
-    // 13. Telemetry push on configured interval (non-blocking) ---------------
-    uint32_t push_interval_ms = g_cfg.push_interval_s * 1000UL;
-    if (wifi_manager_is_connected() &&
-        (now - _last_push_ms) >= push_interval_ms) {
-        _last_push_ms = now;
-        otlp_schedule_push(&g_pet, imu_get_accel_mag(), WiFi.RSSI(),
-                           battery_read_voltage());
+    // 12b. Sleep-aware backlight — dim when pet sleeps, restore on wake ------
+    if (g_pet.isSleeping != _was_sleeping) {
+        _was_sleeping = g_pet.isSleeping;
+        lvgl_port_set_brightness(g_pet.isSleeping ? LCD_BL_SLEEP : LCD_BL_NORMAL);
     }
 
-    // Show push toast when background task reports completion
-    if (otlp_push_complete()) {
-        ui_show_push_toast(otlp_last_push_ok());
+    // 13. Telemetry: sample metrics into buffer every sample_interval_s -------
+    uint32_t sample_interval_ms = g_cfg.sample_interval_s * 1000UL;
+    if ((now - _last_sample_ms) >= sample_interval_ms) {
+        _last_sample_ms = now;
+        otlp_sample_metrics(&g_pet, imu_get_accel_mag(), battery_read_voltage());
     }
+
+    // 13b. WiFi sleep/wake FSM — batch push once per push_interval_s ---------
+    uint32_t push_interval_ms = g_cfg.push_interval_s * 1000UL;
+
+    switch (_telem_phase) {
+
+    case TelemetryPhase::ASLEEP:
+        if ((now - _last_push_ms) >= push_interval_ms) {
+            _wake_start_ms = now;
+            wifi_manager_wake();
+            _telem_phase = TelemetryPhase::WAKING;
+        }
+        break;
+
+    case TelemetryPhase::WAKING:
+        if (wifi_manager_is_connected()) {
+            otlp_schedule_push(&g_pet, imu_get_accel_mag(), WiFi.RSSI(),
+                               battery_read_voltage());
+            _telem_phase = TelemetryPhase::PUSHING;
+        } else if ((now - _wake_start_ms) >= WIFI_WAKE_TIMEOUT_MS) {
+            // Failed to connect — skip push, sleep, retry next window
+            wifi_manager_sleep();
+            _last_push_ms = now;
+            _telem_phase  = TelemetryPhase::ASLEEP;
+            game_log(13, "wifi_wake_timeout", "skipping push");
+        }
+        break;
+
+    case TelemetryPhase::PUSHING:
+        if (otlp_push_complete()) {
+            ui_show_push_toast(otlp_last_push_ok());
+            _last_push_ms = now;
+            wifi_manager_sleep();
+            _telem_phase = TelemetryPhase::SLEEPING;
+        }
+        break;
+
+    case TelemetryPhase::SLEEPING:
+        // Wait for WiFi stack to fully drop before declaring ASLEEP
+        if (!wifi_manager_is_connected()) {
+            _telem_phase = TelemetryPhase::ASLEEP;
+        }
+        break;
+    }
+
+    // 14. Yield — let the RTOS idle-sleep between iterations -----------------
+    // At 10 ms the loop still drives LVGL at 100 calls/s (above the 50 ms
+    // move-timer cadence) while freeing CPU cycles the chip would otherwise
+    // burn in busy-wait.
+    delay(LOOP_IDLE_MS);
 }
