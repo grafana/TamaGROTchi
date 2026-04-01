@@ -8,6 +8,7 @@ on:
       - "include/**"
       - "platformio.ini"
       - "partitions_16M.csv"
+      - ".github/workflows/build-firmware.yml"
   pull_request:
     paths:
       - "src/**"
