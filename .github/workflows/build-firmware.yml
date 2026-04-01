@@ -38,7 +38,9 @@ jobs:
         run: pip install platformio
 
       - name: Build firmware
-        run: pio run -e lolin_s3_mini_1_69
+        run: |
+          pio run -e lolin_s3_mini_1_69
+          mv .pio/build/lolin_s3_mini_1_69/firmware.bin .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
