@@ -9,6 +9,7 @@ on:
       - "platformio.ini"
       - "partitions_16M.csv"
       - ".github/workflows/build-firmware.yml"
+    tags: ["v*"]
   pull_request:
     paths:
       - "src/**"
@@ -19,6 +20,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -43,9 +46,16 @@ jobs:
           pio run -e lolin_s3_mini_1_69
           mv .pio/build/lolin_s3_mini_1_69/firmware.bin .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
 
-      - name: Upload firmware artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
           retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
+          generate_release_notes: true

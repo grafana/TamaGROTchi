@@ -3,7 +3,7 @@ name: Build & Push Simulator Image
 on:
   push:
     branches: [main]
-    paths: ["simulator/**",".github/workflows/**"]
+    paths: ["simulator/**",".github/workflows/build-simulator.yml"]
     tags: ["v*"]
 
 env:
