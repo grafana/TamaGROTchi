@@ -72,7 +72,7 @@ SPAN_BUF_CAP = 8
 
 
 class OtlpClient:
-    """Thread-safe OTLP client for one Tamagotchi instance."""
+    """Thread-safe OTLP client for one TamaGROTchi instance."""
 
     def __init__(
         self,
@@ -217,15 +217,18 @@ class OtlpClient:
             gauge("tamagrotchi.wifi_rssi",      rssi),
             gauge("tamagrotchi.imu_accel_mag",  int(accel_mag * 100)),
             gauge("tamagrotchi.battery_mv",     battery_mv),
+            # Registers this host with Grafana Cloud for Knowledge Graph / App O11y host-hours.
+            gauge("target_info",                1),
         ]
 
         payload = {
             "resourceMetrics": [{
                 "resource": {
                     "attributes": [
-                        {"key": "service.name",      "value": {"stringValue": self._game_id}},
-                        {"key": "service.namespace", "value": {"stringValue": "tamagrotchi"}},
-                        {"key": "device",            "value": {"stringValue": self._device_id}},
+                        {"key": "service.name",        "value": {"stringValue": self._game_id}},
+                        {"key": "service.namespace",   "value": {"stringValue": "tamagrotchi"}},
+                        {"key": "service.instance.id", "value": {"stringValue": self._device_id}},
+                        {"key": "host.name",           "value": {"stringValue": self._device_id}},
                     ],
                 },
                 "scopeMetrics": [{
@@ -266,10 +269,11 @@ class OtlpClient:
             "resourceLogs": [{
                 "resource": {
                     "attributes": [
-                        {"key": "service.name",      "value": {"stringValue": self._game_id}},
-                        {"key": "service.namespace", "value": {"stringValue": "tamagrotchi"}},
-                        {"key": "device",            "value": {"stringValue": self._device_id}},
-                        {"key": "env",               "value": {"stringValue": "sciencefair"}},
+                        {"key": "service.name",        "value": {"stringValue": self._game_id}},
+                        {"key": "service.namespace",   "value": {"stringValue": "tamagrotchi"}},
+                        {"key": "service.instance.id", "value": {"stringValue": self._device_id}},
+                        {"key": "host.name",           "value": {"stringValue": self._device_id}},
+                        {"key": "env",                 "value": {"stringValue": "sciencefair"}},
                     ],
                 },
                 "scopeLogs": [{
@@ -321,6 +325,8 @@ class OtlpClient:
                     "attributes": [
                         {"key": "service.name",           "value": {"stringValue": self._game_id}},
                         {"key": "service.namespace",      "value": {"stringValue": "tamagrotchi"}},
+                        {"key": "service.instance.id",    "value": {"stringValue": self._device_id}},
+                        {"key": "host.name",              "value": {"stringValue": self._device_id}},
                         {"key": "deployment.environment", "value": {"stringValue": "grafanacon"}},
                     ],
                 },

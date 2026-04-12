@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tamagrotchi.fullname" . }}
+  labels:
+    {{- include "tamagrotchi.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.instances }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "tamagrotchi.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "tamagrotchi.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: tamagrotchi
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # Used as the device_id — unique per pod, changes on each restart (new pet).
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OTLP_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tamagrotchi.secretName" . }}
+                  key: otlp-base
+            - name: OTLP_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tamagrotchi.secretName" . }}
+                  key: otlp-auth
+            - name: SPEED
+              value: {{ .Values.speed | quote }}
+            - name: PUSH_INTERVAL
+              value: {{ .Values.pushInterval | quote }}
+            - name: VERBOSE
+              value: {{ .Values.verbose | quote }}
+            - name: NO_TRACES
+              value: {{ .Values.noTraces | quote }}
+            - name: NO_LOGS
+              value: {{ .Values.noLogs | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

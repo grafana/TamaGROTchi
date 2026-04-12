@@ -18,7 +18,7 @@ from pet_state import (
 )
 
 if TYPE_CHECKING:
-    from sim import TamagotchiInstance
+    from sim import TamagrotchiInstance
 
 # ---------------------------------------------------------------------------
 # Constants — mirrors config.h / game_engine.cpp
@@ -87,7 +87,7 @@ def _is_interactive(p: PetState) -> bool:
 # Game tick — called once per second
 # ---------------------------------------------------------------------------
 
-def tick(p: PetState, sim: "TamagotchiInstance") -> None:
+def tick(p: PetState, sim: "TamagrotchiInstance") -> None:
     """Advance the game state by one second. Mirrors game_engine_update()."""
     if p.status == PetStatus.DEAD:
         return
@@ -164,7 +164,7 @@ def _check_alert(
     vital: str,
     value: int,
     thresh: int,
-    sim: "TamagotchiInstance",
+    sim: "TamagrotchiInstance",
     now: float,
 ) -> None:
     sent_attr   = f"{vital}_alert_sent"
@@ -195,7 +195,7 @@ def _check_alert(
                 f"vital={vital} | care_mistakes={p.care_mistakes} | value={value}")
 
 
-def _go_sick(p: PetState, sim: "TamagotchiInstance") -> None:
+def _go_sick(p: PetState, sim: "TamagrotchiInstance") -> None:
     p.status         = PetStatus.SICK
     p.sick_since     = time.monotonic()
     p.low_hunger_start = 0.0
@@ -205,7 +205,7 @@ def _go_sick(p: PetState, sim: "TamagotchiInstance") -> None:
                          f"health={p.health} | hunger_was={p.hunger}", 500)
 
 
-def _die(p: PetState, sim: "TamagotchiInstance", cause: str) -> None:
+def _die(p: PetState, sim: "TamagrotchiInstance", cause: str) -> None:
     p.status = PetStatus.DEAD
     p.stage  = LifeStage.DEAD
     sim.log(17, "death",
@@ -231,7 +231,7 @@ def evolution_check(p: PetState) -> None:
         p.evolve_ready = True
 
 
-def evolution_advance(p: PetState, sim: "TamagotchiInstance") -> None:
+def evolution_advance(p: PetState, sim: "TamagrotchiInstance") -> None:
     if not p.evolve_ready:
         return
     p.evolve_ready = False
@@ -263,7 +263,7 @@ def evolution_advance(p: PetState, sim: "TamagotchiInstance") -> None:
 # Actions — mirrors actions.cpp
 # ---------------------------------------------------------------------------
 
-def action_feed(p: PetState, food: str, sim: "TamagotchiInstance") -> bool:
+def action_feed(p: PetState, food: str, sim: "TamagrotchiInstance") -> bool:
     """food: 'microchip' or 'sin_wave'"""
     if not _is_interactive(p):
         return False
@@ -289,7 +289,7 @@ def action_feed(p: PetState, food: str, sim: "TamagotchiInstance") -> bool:
     return True
 
 
-def action_play(p: PetState, sim: "TamagotchiInstance") -> bool:
+def action_play(p: PetState, sim: "TamagrotchiInstance") -> bool:
     if not _is_interactive(p):
         return False
 
@@ -305,7 +305,7 @@ def action_play(p: PetState, sim: "TamagotchiInstance") -> bool:
     return True
 
 
-def action_medicine(p: PetState, sim: "TamagotchiInstance") -> bool:
+def action_medicine(p: PetState, sim: "TamagrotchiInstance") -> bool:
     if not _is_interactive(p):
         return False
 
@@ -328,7 +328,7 @@ def action_medicine(p: PetState, sim: "TamagotchiInstance") -> bool:
     return True
 
 
-def action_discipline(p: PetState, sim: "TamagotchiInstance") -> bool:
+def action_discipline(p: PetState, sim: "TamagrotchiInstance") -> bool:
     if not _is_interactive(p):
         return False
 
@@ -341,7 +341,7 @@ def action_discipline(p: PetState, sim: "TamagotchiInstance") -> bool:
     return True
 
 
-def action_shake(p: PetState, mag: float, sim: "TamagotchiInstance") -> None:
+def action_shake(p: PetState, mag: float, sim: "TamagrotchiInstance") -> None:
     """Simulate IMU shake. mag > 3.0 → dizzy (hard), else gentle → play."""
     p.last_accel_mag = mag
     if mag > 3.0:

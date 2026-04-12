@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Tamagotchi PC Simulator
-=======================
-Runs N simultaneous Tamagotchi instances, each with its own game loop,
+TamaGROTchi PC Simulator
+========================
+Runs N simultaneous TamaGROTchi instances, each with its own game loop,
 random action scheduler, and OTLP telemetry push — output is format-identical
 to the ESP32-S3 firmware.
 
@@ -89,10 +89,10 @@ def _generate_game_id() -> str:
 
 
 # ---------------------------------------------------------------------------
-# TamagotchiInstance — one pet running in its own thread
+# TamagrotchiInstance — one pet running in its own thread
 # ---------------------------------------------------------------------------
 
-class TamagotchiInstance:
+class TamagrotchiInstance:
     """
     Wraps PetState + OtlpClient + game tick loop + random action scheduler.
 
@@ -106,8 +106,8 @@ class TamagotchiInstance:
 
     def __init__(
         self,
-        index:         int,
         device_id:     str,
+        index:         int = 0,
         otlp_base:     str,
         auth:          str,
         speed:         float,
@@ -307,7 +307,7 @@ class TamagotchiInstance:
 # Status table printer
 # ---------------------------------------------------------------------------
 
-def _print_table(instances: list[TamagotchiInstance]) -> None:
+def _print_table(instances: list[TamagrotchiInstance]) -> None:
     header = (
         f"{'#':>3}  {'game_id':<14}  {'device':<10}  "
         f"{'stage':<8}  {'hun':>4}  {'hap':>4}  {'hp':>4}  "
@@ -346,7 +346,7 @@ def main() -> None:
     file_cfg = _load_config_file()
 
     parser = argparse.ArgumentParser(
-        description="Tamagotchi PC Simulator — multi-instance OTLP telemetry generator",
+        description="TamaGROTchi PC Simulator — multi-instance OTLP telemetry generator",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -374,7 +374,7 @@ def main() -> None:
     send_traces = not args.no_traces
     send_logs   = not args.no_logs
 
-    print(f"Starting {args.instances} Tamagotchi instance(s)")
+    print(f"Starting {args.instances} TamaGROTchi instance(s)")
     print(f"  OTLP base:     {args.otlp_base}")
     print(f"  Speed:         {args.speed}×")
     print(f"  Push interval: {args.push_interval}s")
@@ -382,12 +382,12 @@ def main() -> None:
     print(f"  Logs:          {'yes' if send_logs else 'no'}")
     print()
 
-    instances: list[TamagotchiInstance] = []
+    instances: list[TamagrotchiInstance] = []
     threads:   list[threading.Thread]   = []
 
     for i in range(args.instances):
         device_id = f"{args.device_prefix}-{i:02d}"
-        inst = TamagotchiInstance(
+        inst = TamagrotchiInstance(
             index=i,
             device_id=device_id,
             otlp_base=args.otlp_base,

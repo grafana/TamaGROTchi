@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
-Kubernetes entrypoint for a single Tamagotchi instance.
+Kubernetes entrypoint for a single TamaGROTchi instance.
 
 Reads configuration from environment variables (injected by Helm):
     OTLP_BASE        — OTLP gateway base URL (required)
     OTLP_AUTH        — Authorization header value, e.g. "Basic glc_..." (required)
-    DEVICE_PREFIX    — Device ID prefix (default: sim)
+    MY_POD_NAME      — Pod name from Downward API; used as device_id (required in k8s)
     SPEED            — Simulation speed multiplier (default: 1.0)
     PUSH_INTERVAL    — OTLP push interval in seconds (default: 30)
     VERBOSE          — "true" to enable verbose HTTP logging (default: false)
     NO_TRACES        — "true" to skip trace pushes (default: false)
     NO_LOGS          — "true" to skip log pushes (default: false)
 
-The pod index is read from JOB_COMPLETION_INDEX (set automatically by
-Kubernetes Indexed Jobs). The device ID becomes {DEVICE_PREFIX}-{INDEX:02d}.
-
-When the pet dies the process exits with code 0 — the pod enters Completed
-state and is not restarted (restartPolicy: Never).
+When the pet dies the process exits with code 0. The Deployment restartPolicy
+(Always) causes Kubernetes to restart the container as a fresh pet with the
+same pod name.
 """
 
 from __future__ import annotations
@@ -27,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from sim import TamagotchiInstance
+from sim import TamagrotchiInstance
 
 
 def _env(key: str, default: str = "") -> str:
@@ -49,25 +47,21 @@ def main() -> None:
         print("ERROR: OTLP_AUTH environment variable is required", file=sys.stderr)
         sys.exit(2)
 
-    index        = int(_env("JOB_COMPLETION_INDEX", "0"))
-    device_prefix = _env("DEVICE_PREFIX", "sim")
+    device_id    = _env("MY_POD_NAME", f"sim-local")
     speed        = float(_env("SPEED", "1.0"))
     push_interval = float(_env("PUSH_INTERVAL", "30.0"))
     verbose      = _env_bool("VERBOSE")
     send_traces  = not _env_bool("NO_TRACES")
     send_logs    = not _env_bool("NO_LOGS")
 
-    device_id = f"{device_prefix}-{index:02d}"
+    print(f"[tamagrotchi] Starting pet: device_id={device_id}")
+    print(f"[tamagrotchi] OTLP base:     {otlp_base}")
+    print(f"[tamagrotchi] Speed:         {speed}x")
+    print(f"[tamagrotchi] Push interval: {push_interval}s")
+    print(f"[tamagrotchi] Traces:        {'yes' if send_traces else 'no'}")
+    print(f"[tamagrotchi] Logs:          {'yes' if send_logs else 'no'}")
 
-    print(f"[tamagotchi] Starting pet: device_id={device_id} index={index}")
-    print(f"[tamagotchi] OTLP base:     {otlp_base}")
-    print(f"[tamagotchi] Speed:         {speed}x")
-    print(f"[tamagotchi] Push interval: {push_interval}s")
-    print(f"[tamagotchi] Traces:        {'yes' if send_traces else 'no'}")
-    print(f"[tamagotchi] Logs:          {'yes' if send_logs else 'no'}")
-
-    inst = TamagotchiInstance(
-        index=index,
+    inst = TamagrotchiInstance(
         device_id=device_id,
         otlp_base=otlp_base,
         auth=otlp_auth,
@@ -80,7 +74,7 @@ def main() -> None:
 
     inst.run()  # Returns when pet dies (status == DEAD)
 
-    print(f"[tamagotchi] {device_id} ({inst.game_id}) has died. Pod exiting.")
+    print(f"[tamagrotchi] {device_id} ({inst.game_id}) has died. Pod exiting.")
     sys.exit(0)
 
 
