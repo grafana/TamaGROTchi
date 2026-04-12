@@ -107,7 +107,6 @@ class TamagrotchiInstance:
     def __init__(
         self,
         device_id:     str,
-        index:         int = 0,
         otlp_base:     str,
         auth:          str,
         speed:         float,
@@ -115,6 +114,7 @@ class TamagrotchiInstance:
         verbose:       bool,
         send_traces:   bool,
         send_logs:     bool,
+        index:         int = 0,
     ) -> None:
         self.index        = index
         self.device_id    = device_id
