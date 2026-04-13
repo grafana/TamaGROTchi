@@ -142,9 +142,10 @@ static void add_resource_attrs(JsonObject& resource) {
         a["key"] = k;
         a["value"]["stringValue"] = v;
     };
-    add_attr("service.name",      _game_id);
-    add_attr("service.namespace", "tamagrotchi");
-    add_attr("device",            _device_id);
+    add_attr("service.name",        _game_id);
+    add_attr("service.namespace",   "tamagrotchi");
+    add_attr("service.instance.id", _device_id);
+    add_attr("host.name",           _device_id);
 }
 
 // Add a single data point to an existing gauge metric object's dataPoints array.
@@ -256,6 +257,10 @@ static bool do_push_metrics(const PetState* p, float accel_mag, int rssi, float 
       JsonArray dp = m["gauge"]["dataPoints"].to<JsonArray>();
       for (uint8_t i = 0; i < count; i++) add_data_point(dp, (int64_t)(snap[i].battery_v * 1000), snap[i].ts_ns); }
 
+    // target_info (value=1) — registers this device as an active host in Grafana Cloud.
+    // Required for Knowledge Graph and App Observability host-hours tracking.
+    add_gauge_metric(metrics, "target_info", 1, ts_now);
+
     // RSSI is only valid while WiFi is on — single current-time point
     add_gauge_metric(metrics, "tamagrotchi.wifi_rssi", rssi, ts_now);
 
@@ -311,10 +316,11 @@ static bool do_flush_logs() {
         a["key"] = k;
         a["value"]["stringValue"] = v;
     };
-    add_attr("service.name",      _game_id);
-    add_attr("service.namespace", "tamagrotchi");
-    add_attr("device",            _device_id);
-    add_attr("env",               "sciencefair");
+    add_attr("service.name",        _game_id);
+    add_attr("service.namespace",   "tamagrotchi");
+    add_attr("service.instance.id", _device_id);
+    add_attr("host.name",           _device_id);
+    add_attr("env",                 "sciencefair");
 
     JsonArray sl = r["scopeLogs"].to<JsonArray>();
     JsonObject scope = sl.add<JsonObject>();
@@ -401,6 +407,8 @@ static bool do_flush_traces() {
     };
     add_attr("service.name",           _game_id);
     add_attr("service.namespace",      "tamagrotchi");
+    add_attr("service.instance.id",    _device_id);
+    add_attr("host.name",              _device_id);
     add_attr("deployment.environment", "grafanacon");
 
     JsonArray ss = r["scopeSpans"].to<JsonArray>();
