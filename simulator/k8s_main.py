@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -61,21 +62,22 @@ def main() -> None:
     print(f"[tamagrotchi] Traces:        {'yes' if send_traces else 'no'}")
     print(f"[tamagrotchi] Logs:          {'yes' if send_logs else 'no'}")
 
-    inst = TamagrotchiInstance(
-        device_id=device_id,
-        otlp_base=otlp_base,
-        auth=otlp_auth,
-        speed=speed,
-        push_interval=push_interval,
-        verbose=verbose,
-        send_traces=send_traces,
-        send_logs=send_logs,
-    )
+    while True:
+        inst = TamagrotchiInstance(
+            device_id=device_id,
+            otlp_base=otlp_base,
+            auth=otlp_auth,
+            speed=speed,
+            push_interval=push_interval,
+            verbose=verbose,
+            send_traces=send_traces,
+            send_logs=send_logs,
+        )
 
-    inst.run()  # Returns when pet dies (status == DEAD)
+        inst.run()  # Returns when pet dies (status == DEAD)
 
-    print(f"[tamagrotchi] {device_id} ({inst.game_id}) has died. Pod exiting.")
-    sys.exit(0)
+        print(f"[tamagrotchi] {device_id} ({inst.game_id}) has died. Respawning...")
+        time.sleep(2)
 
 
 if __name__ == "__main__":
