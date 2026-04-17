@@ -6,6 +6,8 @@
 .DS_Store
 .claude/
 .venv/
+__pycache__/
+*.pyc
 
 # Real config with credentials — use data/config.json.example instead
 data/config.json
