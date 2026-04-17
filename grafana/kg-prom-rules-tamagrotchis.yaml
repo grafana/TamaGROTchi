@@ -1,0 +1,137 @@
+name: tamagrotchi-saafe
+groups:
+  - name: tamagrotchi-pet-health
+    interval: 60s
+    rules:
+      # label_replace copies service_name → asserts_env so KG can match alerts to entities
+
+      # ── Hunger (Error) ──────────────────────────────────────────────────────
+      - alert: TamagrotchiHungry
+        expr: label_replace(tamagrotchi_hunger{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 30
+        for: 1m
+        labels:
+          asserts_alert_category: error
+          asserts_severity: warning
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} is hungry (hunger={{ $value }})"
+          description: "Pet hunger dropped below 30. Feed it a microchip or sine wave!"
+
+      - alert: TamagrotchiStarving
+        expr: label_replace(tamagrotchi_hunger{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 15
+        for: 1m
+        labels:
+          asserts_alert_category: error
+          asserts_severity: critical
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} is starving (hunger={{ $value }})"
+          description: "Critical: hunger below 15. Pet will become sick soon!"
+
+      # ── Happiness (Error) ────────────────────────────────────────────────────
+      - alert: TamagrotchiUnhappy
+        expr: label_replace(tamagrotchi_happiness{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 30
+        for: 1m
+        labels:
+          asserts_alert_category: error
+          asserts_severity: warning
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} is unhappy (happiness={{ $value }})"
+          description: "Pet happiness dropped below 30. Time to play!"
+
+      - alert: TamagrotchiMiserable
+        expr: label_replace(tamagrotchi_happiness{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 15
+        for: 1m
+        labels:
+          asserts_alert_category: error
+          asserts_severity: critical
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} is miserable (happiness={{ $value }})"
+          description: "Critical: happiness below 15!"
+
+      # ── Health (Error) ───────────────────────────────────────────────────────
+      - alert: TamagrotchiUnhealthy
+        expr: label_replace(tamagrotchi_health{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 30
+        for: 1m
+        labels:
+          asserts_alert_category: error
+          asserts_severity: warning
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} is sick (health={{ $value }})"
+          description: "Pet health dropped below 30. Give medicine!"
+
+      - alert: TamagrotchiCriticalHealth
+        expr: label_replace(tamagrotchi_health{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 10
+        for: 1m
+        labels:
+          asserts_alert_category: error
+          asserts_severity: critical
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} is critically ill (health={{ $value }})"
+          description: "Critical: health below 10. Pet may die!"
+
+      # ── Dead pet (Failure) ───────────────────────────────────────────────────
+      - alert: TamagrotchiDead
+        expr: label_replace(tamagrotchi_stage{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") == 6
+        for: 0m
+        labels:
+          asserts_alert_category: failure
+          asserts_severity: critical
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} has died"
+          description: "The pet has reached stage DEAD (stage=6). RIP."
+
+  - name: tamagrotchi-saturation
+    interval: 60s
+    rules:
+      # ── Care mistakes (Saturation) ───────────────────────────────────────────
+      - alert: TamagrotchiNeglected
+        expr: label_replace(tamagrotchi_care_mistakes{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") > 3
+        for: 2m
+        labels:
+          asserts_alert_category: saturation
+          asserts_severity: warning
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} has {{ $value }} care mistakes"
+          description: "Too many neglected alerts. Pet outcome will be affected."
+
+      - alert: TamagrotchiBadlyNeglected
+        expr: label_replace(tamagrotchi_care_mistakes{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") > 5
+        for: 2m
+        labels:
+          asserts_alert_category: saturation
+          asserts_severity: critical
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} critically neglected ({{ $value }} mistakes)"
+          description: "Critical neglect level. Pet outcome will be very poor."
+
+      # ── Battery (Saturation) ─────────────────────────────────────────────────
+      # LiPo range: 3000mV (0%) → 4200mV (100%)
+      - alert: TamagrotchiBatteryLow
+        expr: label_replace(tamagrotchi_battery_mv{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 3200
+        for: 5m
+        labels:
+          asserts_alert_category: saturation
+          asserts_severity: warning
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} battery low ({{ $value }}mV)"
+          description: "Battery below 3200mV (~17%). Charge soon."
+
+      - alert: TamagrotchiBatteryCritical
+        expr: label_replace(tamagrotchi_battery_mv{job=~"tamagrotchi/.*"}, "asserts_env", "$1", "service_name", "(.*)") < 3000
+        for: 5m
+        labels:
+          asserts_alert_category: saturation
+          asserts_severity: critical
+          asserts_entity_type: Tamagrotchi
+        annotations:
+          summary: "{{ $labels.service_name }} battery critical ({{ $value }}mV)"
+          description: "Battery below 3000mV. Device may shut down imminently."

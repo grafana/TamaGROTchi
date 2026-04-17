@@ -1,0 +1,25 @@
+name: tamagrotchis
+entities:
+  - type: Tamagrotchi
+    name: service_name
+    scope:
+      env: asserts_env
+    definedBy:
+      - query: "label_replace(max by (service_name, service_namespace) (tamagrotchi_hunger{job=~\"tamagrotchi/.*\"}), \"asserts_env\", \"$1\", \"service_name\", \"(.*)\")"
+        labelValues:
+          service: service_name
+        metricValue: hunger
+    enrichedBy:
+      - query: "label_replace(max by (service_name) (tamagrotchi_happiness{job=~\"tamagrotchi/.*\"}), \"asserts_env\", \"$1\", \"service_name\", \"(.*)\")"
+        metricValue: happiness
+      - query: "label_replace(max by (service_name) (tamagrotchi_health{job=~\"tamagrotchi/.*\"}), \"asserts_env\", \"$1\", \"service_name\", \"(.*)\")"
+        metricValue: health
+      - query: "label_replace(max by (service_name) (tamagrotchi_stage{job=~\"tamagrotchi/.*\"}), \"asserts_env\", \"$1\", \"service_name\", \"(.*)\")"
+        metricValue: stage
+      - query: "label_replace(max by (service_name) (tamagrotchi_battery_mv{job=~\"tamagrotchi/.*\"}), \"asserts_env\", \"$1\", \"service_name\", \"(.*)\")"
+        metricValue: battery_mv
+      - query: "label_replace(max by (service_name) (tamagrotchi_care_mistakes{job=~\"tamagrotchi/.*\"}), \"asserts_env\", \"$1\", \"service_name\", \"(.*)\")"
+        metricValue: care_mistakes
+      - query: "label_replace(max by (service_name, device) (tamagrotchi_battery_mv{job=~\"tamagrotchi/.*\"}), \"asserts_env\", \"$1\", \"service_name\", \"(.*)\")"
+        labelValues:
+          device: device
