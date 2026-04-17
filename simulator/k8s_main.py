@@ -48,12 +48,25 @@ def main() -> None:
         print("ERROR: OTLP_AUTH environment variable is required", file=sys.stderr)
         sys.exit(2)
 
-    device_id    = _env("MY_POD_NAME", f"sim-local")
+    device_id    = _env("MY_POD_NAME", "sim-local")
     speed        = float(_env("SPEED", "1.0"))
     push_interval = float(_env("PUSH_INTERVAL", "30.0"))
     verbose      = _env_bool("VERBOSE")
     send_traces  = not _env_bool("NO_TRACES")
     send_logs    = not _env_bool("NO_LOGS")
+
+    # Kubernetes resource attributes for Grafana Cloud Knowledge Graph.
+    # Only populated when running inside a pod (env vars injected by Helm Downward API).
+    k8s_attrs: dict[str, str] = {}
+    for env_key, attr_key in [
+        ("MY_POD_NAME",       "k8s.pod.name"),
+        ("MY_POD_NAMESPACE",  "k8s.namespace.name"),
+        ("MY_NODE_NAME",      "k8s.node.name"),
+        ("MY_DEPLOYMENT_NAME","k8s.deployment.name"),
+    ]:
+        val = _env(env_key)
+        if val:
+            k8s_attrs[attr_key] = val
 
     print(f"[tamagrotchi] Starting pet: device_id={device_id}")
     print(f"[tamagrotchi] OTLP base:     {otlp_base}")
@@ -72,6 +85,7 @@ def main() -> None:
             verbose=verbose,
             send_traces=send_traces,
             send_logs=send_logs,
+            k8s_attrs=k8s_attrs,
         )
 
         inst.run()  # Returns when pet dies (status == DEAD)

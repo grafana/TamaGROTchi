@@ -115,6 +115,7 @@ class TamagrotchiInstance:
         send_traces:   bool,
         send_logs:     bool,
         index:         int = 0,
+        k8s_attrs:     dict[str, str] | None = None,
     ) -> None:
         self.index        = index
         self.device_id    = device_id
@@ -131,6 +132,7 @@ class TamagrotchiInstance:
             device_id=device_id,
             game_id=self.game_id,
             verbose=verbose,
+            k8s_attrs=k8s_attrs,
         )
 
         self._stop_event    = threading.Event()

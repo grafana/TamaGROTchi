@@ -81,6 +81,7 @@ class OtlpClient:
         device_id:  str,
         game_id:    str,
         verbose:    bool = False,
+        k8s_attrs:  dict[str, str] | None = None,
     ) -> None:
         self._metrics_url = f"{otlp_base.rstrip('/')}/v1/metrics"
         self._logs_url    = f"{otlp_base.rstrip('/')}/v1/logs"
@@ -89,6 +90,7 @@ class OtlpClient:
         self._device_id   = device_id
         self._game_id     = game_id
         self._verbose     = verbose
+        self._k8s_attrs   = k8s_attrs or {}
 
         self._lock:      threading.Lock   = threading.Lock()
         self._log_buf:   list[_LogEntry]  = []
@@ -103,6 +105,24 @@ class OtlpClient:
             "Content-Type": "application/json",
             "Authorization": self._auth,
         })
+
+    # ------------------------------------------------------------------
+    # Resource attributes (common to all three signals)
+    # ------------------------------------------------------------------
+
+    def _resource_attrs(self, extra: dict[str, str] | None = None) -> list[dict]:
+        attrs = [
+            {"key": "service.name",        "value": {"stringValue": self._game_id}},
+            {"key": "service.namespace",   "value": {"stringValue": "tamagrotchi"}},
+            {"key": "service.instance.id", "value": {"stringValue": self._device_id}},
+            {"key": "host.name",           "value": {"stringValue": self._device_id}},
+        ]
+        for k, v in self._k8s_attrs.items():
+            attrs.append({"key": k, "value": {"stringValue": v}})
+        if extra:
+            for k, v in extra.items():
+                attrs.append({"key": k, "value": {"stringValue": v}})
+        return attrs
 
     # ------------------------------------------------------------------
     # Log buffering
@@ -223,14 +243,7 @@ class OtlpClient:
 
         payload = {
             "resourceMetrics": [{
-                "resource": {
-                    "attributes": [
-                        {"key": "service.name",        "value": {"stringValue": self._game_id}},
-                        {"key": "service.namespace",   "value": {"stringValue": "tamagrotchi"}},
-                        {"key": "service.instance.id", "value": {"stringValue": self._device_id}},
-                        {"key": "host.name",           "value": {"stringValue": self._device_id}},
-                    ],
-                },
+                "resource": {"attributes": self._resource_attrs()},
                 "scopeMetrics": [{
                     "scope": {"name": "tamagrotchi"},
                     "metrics": metrics,
@@ -267,15 +280,7 @@ class OtlpClient:
 
         payload = {
             "resourceLogs": [{
-                "resource": {
-                    "attributes": [
-                        {"key": "service.name",        "value": {"stringValue": self._game_id}},
-                        {"key": "service.namespace",   "value": {"stringValue": "tamagrotchi"}},
-                        {"key": "service.instance.id", "value": {"stringValue": self._device_id}},
-                        {"key": "host.name",           "value": {"stringValue": self._device_id}},
-                        {"key": "env",                 "value": {"stringValue": "sciencefair"}},
-                    ],
-                },
+                "resource": {"attributes": self._resource_attrs({"env": "sciencefair"})},
                 "scopeLogs": [{
                     "logRecords": records,
                 }],
@@ -321,15 +326,7 @@ class OtlpClient:
 
         payload = {
             "resourceSpans": [{
-                "resource": {
-                    "attributes": [
-                        {"key": "service.name",           "value": {"stringValue": self._game_id}},
-                        {"key": "service.namespace",      "value": {"stringValue": "tamagrotchi"}},
-                        {"key": "service.instance.id",    "value": {"stringValue": self._device_id}},
-                        {"key": "host.name",              "value": {"stringValue": self._device_id}},
-                        {"key": "deployment.environment", "value": {"stringValue": "grafanacon"}},
-                    ],
-                },
+                "resource": {"attributes": self._resource_attrs({"deployment.environment": "grafanacon"})},
                 "scopeSpans": [{
                     "scope": {"name": "tamagrotchi-firmware"},
                     "spans": spans,
