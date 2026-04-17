@@ -72,6 +72,15 @@ public:
 
         setPanel(&_panel);
     }
+
+    // Call before init() to override the compile-time invert setting.
+    // Some ST7789V2 panel batches (e.g. the US-sourced boards) ship with the
+    // opposite MADCTL invert default and show photo-negative colours otherwise.
+    void setInvert(bool invert) {
+        auto cfg = _panel.config();
+        cfg.invert = invert;
+        _panel.config(cfg);
+    }
 };
 
 extern LGFX gfx;   // defined in lvgl_port.cpp

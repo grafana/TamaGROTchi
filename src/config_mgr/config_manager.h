@@ -18,6 +18,7 @@ struct AppConfig {
     uint32_t sample_interval_s; // how often to snapshot metrics into RAM buffer
     bool buzzer_enabled;       // false = mute all sounds
     bool flash_alerts;         // true = flash backlight whenever a melody plays
+    bool invert_colors;        // ST7789 MADCTL invert — some panel batches ship with the opposite default
 };
 
 // Load config from LittleFS /config.json.

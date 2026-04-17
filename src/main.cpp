@@ -89,7 +89,7 @@ void setup() {
     config_manager_print(&g_cfg);
 
     // 2. Display + LVGL -------------------------------------------------------
-    lvgl_port_init();          // init LovyanGFX + LVGL
+    lvgl_port_init(g_cfg.invert_colors);   // init LovyanGFX + LVGL
     ui_screens_init();         // build all LVGL screens (also inits sprite engine)
     ui_show_game();            // activate main game screen
 

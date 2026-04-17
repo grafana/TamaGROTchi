@@ -32,12 +32,13 @@ static void flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map)
 // =============================================================================
 // lvgl_port_init — call once in setup() after Serial.begin()
 // =============================================================================
-void lvgl_port_init() {
+void lvgl_port_init(bool invert_colors) {
     // Force backlight pin HIGH before init — failsafe if LEDC setup fails
     pinMode(PIN_LCD_BL, OUTPUT);
     digitalWrite(PIN_LCD_BL, HIGH);
 
     // Bring up display
+    gfx.setInvert(invert_colors);
     gfx.init();
     gfx.setRotation(0);
     gfx.setBrightness(LCD_BL_NORMAL);
