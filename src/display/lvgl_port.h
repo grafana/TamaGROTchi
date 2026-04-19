@@ -3,9 +3,8 @@
 #include "lgfx_config.h"
 
 // Initialise display hardware and LVGL. Call once in setup().
-// `invert_colors` maps to the ST7789 MADCTL invert bit — set false on panel
-// batches that ship with the opposite factory default.
-void lvgl_port_init(bool invert_colors = true);
+// `bgr_order` = true swaps R/B channels for panel variants wired BGR.
+void lvgl_port_init(bool bgr_order = false);
 
 // Drive LVGL timers, rendering, and backlight flash. Call every loop() iteration.
 void lvgl_port_tick();

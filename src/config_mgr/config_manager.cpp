@@ -15,7 +15,7 @@ static void apply_defaults(AppConfig* cfg) {
     cfg->sample_interval_s  = TELEMETRY_SAMPLE_INTERVAL_MS / 1000;
     cfg->buzzer_enabled   = true;
     cfg->flash_alerts     = true;
-    cfg->invert_colors    = true;   // matches the ST7789V2 IPS panels we ship in the UK
+    cfg->bgr_order        = false;  // UK-sourced panels are wired RGB
 }
 
 bool config_manager_load(AppConfig* cfg) {
@@ -74,8 +74,8 @@ bool config_manager_load(AppConfig* cfg) {
         cfg->flash_alerts = doc["game"]["flash_alerts"];
 
     // Display
-    if (doc["display"]["invert_colors"].is<bool>())
-        cfg->invert_colors = doc["display"]["invert_colors"];
+    if (doc["display"]["bgr_order"].is<bool>())
+        cfg->bgr_order = doc["display"]["bgr_order"];
 
     Serial.println("[config] Loaded from /config.json");
     return true;
@@ -90,7 +90,7 @@ void config_manager_print(const AppConfig* cfg) {
     Serial.printf("[config] sample_interval: %lu s\n", cfg->sample_interval_s);
     Serial.printf("[config] buzzer:         %s\n", cfg->buzzer_enabled ? "on" : "muted");
     Serial.printf("[config] flash_alerts:   %s\n", cfg->flash_alerts ? "on" : "off");
-    Serial.printf("[config] invert_colors:  %s\n", cfg->invert_colors ? "true" : "false");
+    Serial.printf("[config] bgr_order:      %s\n", cfg->bgr_order ? "true (swap R/B)" : "false (RGB)");
     Serial.printf("[config] auth_b64:       %.6s... (len=%d)\n",
                   cfg->auth_b64, (int)strlen(cfg->auth_b64));
 }

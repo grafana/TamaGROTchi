@@ -16,3 +16,8 @@ float battery_read_voltage();
 
 // Returns battery level as 0–100, clamped. Based on 3.0V=0% / 4.2V=100%.
 uint8_t battery_get_percent();
+
+// Map a pre-sampled voltage to 0–100 without touching the ADC. Use this when a
+// caller already has a voltage reading and wants to avoid a second 16-sample
+// average.
+uint8_t battery_v_to_percent(float v);

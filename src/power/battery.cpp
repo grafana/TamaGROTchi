@@ -18,9 +18,12 @@ float battery_read_voltage() {
     return adc_v * BAT_DIVIDER_RATIO;
 }
 
-uint8_t battery_get_percent() {
-    float v = battery_read_voltage();
+uint8_t battery_v_to_percent(float v) {
     if (v >= BAT_V_FULL)  return 100;
     if (v <= BAT_V_EMPTY) return 0;
     return (uint8_t)((v - BAT_V_EMPTY) / (BAT_V_FULL - BAT_V_EMPTY) * 100.0f);
+}
+
+uint8_t battery_get_percent() {
+    return battery_v_to_percent(battery_read_voltage());
 }

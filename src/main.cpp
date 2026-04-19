@@ -30,6 +30,7 @@
 // =============================================================================
 static PetState  g_pet;
 static AppConfig g_cfg;
+static uint8_t   _battery_pct = 100;   // refreshed on telemetry sample tick (16 ADC reads)
 
 // =============================================================================
 // UI state machine
@@ -89,7 +90,7 @@ void setup() {
     config_manager_print(&g_cfg);
 
     // 2. Display + LVGL -------------------------------------------------------
-    lvgl_port_init(g_cfg.invert_colors);   // init LovyanGFX + LVGL
+    lvgl_port_init(g_cfg.bgr_order);   // init LovyanGFX + LVGL
     ui_screens_init();         // build all LVGL screens (also inits sprite engine)
     ui_show_game();            // activate main game screen
 
@@ -107,6 +108,7 @@ void setup() {
     imu_driver_init();
     rtc_driver_init();
     battery_init();
+    _battery_pct = battery_get_percent();   // prime the header indicator
 
     // 6. Pet state + game engine ----------------------------------------------
     pet_state_init(&g_pet);
@@ -439,7 +441,7 @@ void loop() {
 
     // 12. Refresh UI ----------------------------------------------------------
     ui_update_vitals(&g_pet);
-    ui_update_header(&g_pet, wifi_manager_is_connected());
+    ui_update_header(&g_pet, wifi_manager_is_connected(), _battery_pct);
     // Skip sprite state update while the B-cycle dev test is active or the
     // mini-game is running (both manage the sprite state themselves).
     if (!g_sprite_test && g_ui_mode != UiMode::MINI_GAME) {
@@ -458,7 +460,10 @@ void loop() {
     uint32_t sample_interval_ms = g_cfg.sample_interval_s * 1000UL;
     if ((now - _last_sample_ms) >= sample_interval_ms) {
         _last_sample_ms = now;
-        otlp_sample_metrics(&g_pet, imu_get_accel_mag(), battery_read_voltage());
+        // Share a single ADC read between telemetry and the header indicator
+        float batt_v = battery_read_voltage();
+        _battery_pct = battery_v_to_percent(batt_v);
+        otlp_sample_metrics(&g_pet, imu_get_accel_mag(), batt_v);
     }
 
     // 13b. WiFi sleep/wake FSM — batch push once per push_interval_s ---------

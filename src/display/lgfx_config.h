@@ -73,12 +73,12 @@ public:
         setPanel(&_panel);
     }
 
-    // Call before init() to override the compile-time invert setting.
-    // Some ST7789V2 panel batches (e.g. the US-sourced boards) ship with the
-    // opposite MADCTL invert default and show photo-negative colours otherwise.
-    void setInvert(bool invert) {
+    // Call before init() to override the compile-time RGB order.
+    // Some panel variants (e.g. the US-sourced ST7789V2 boards) are wired BGR
+    // and show red/blue swapped unless rgb_order is flipped.
+    void setBgrOrder(bool bgr) {
         auto cfg = _panel.config();
-        cfg.invert = invert;
+        cfg.rgb_order = !bgr;
         _panel.config(cfg);
     }
 };

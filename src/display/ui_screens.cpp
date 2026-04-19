@@ -42,8 +42,9 @@ static lv_obj_t* _screen_dead = nullptr;
 static lv_obj_t* _icon_cell[(int)MenuItem::MENU_COUNT];
 static lv_obj_t* _icon_lbl[(int)MenuItem::MENU_COUNT];
 
-// Age / WiFi (right side of icon bar)
+// Age / Battery / WiFi (right side of icon bar)
 static lv_obj_t* _lbl_age  = nullptr;
+static lv_obj_t* _lbl_batt = nullptr;
 static lv_obj_t* _lbl_wifi = nullptr;
 
 // Vitals
@@ -230,12 +231,19 @@ static void build_game_screen() {
     lv_obj_set_style_text_color(_lbl_age, lv_color_make(0x99, 0x99, 0xAA), 0);
     lv_obj_set_pos(_lbl_age, ICONS_END + 2, 10);
 
+    // Battery symbol (just left of WiFi)
+    _lbl_batt = lv_label_create(icon_bar);
+    lv_label_set_text(_lbl_batt, LV_SYMBOL_BATTERY_EMPTY);
+    lv_obj_set_style_text_font(_lbl_batt, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(_lbl_batt, lv_color_make(0x66, 0x66, 0x77), 0);
+    lv_obj_set_pos(_lbl_batt, LCD_WIDTH - 44, 8);
+
     // WiFi symbol (far right)
     _lbl_wifi = lv_label_create(icon_bar);
     lv_label_set_text(_lbl_wifi, LV_SYMBOL_WARNING);
     lv_obj_set_style_text_font(_lbl_wifi, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(_lbl_wifi, lv_color_make(0x66, 0x66, 0x77), 0);
-    lv_obj_set_pos(_lbl_wifi, LCD_WIDTH - 28, 8);
+    lv_obj_set_pos(_lbl_wifi, LCD_WIDTH - 22, 8);
 
     // -------------------------------------------------------------------------
     // Sprite zone (y=36, h=150)
@@ -427,7 +435,7 @@ void ui_update_vitals(const PetState* p) {
     }
 }
 
-void ui_update_header(const PetState* p, bool wifi_connected) {
+void ui_update_header(const PetState* p, bool wifi_connected, uint8_t battery_pct) {
     if (!_lbl_age) return;
 
     char age_buf[16];
@@ -444,6 +452,18 @@ void ui_update_header(const PetState* p, bool wifi_connected) {
     } else {
         lv_label_set_text(_lbl_wifi, LV_SYMBOL_WARNING);
         lv_obj_set_style_text_color(_lbl_wifi, lv_color_make(0x66, 0x66, 0x77), 0);
+    }
+
+    if (_lbl_batt) {
+        const char* sym;
+        lv_color_t  col;
+        if      (battery_pct >= 80) { sym = LV_SYMBOL_BATTERY_FULL;  col = lv_color_make(0x3B, 0xD4, 0x79); }
+        else if (battery_pct >= 60) { sym = LV_SYMBOL_BATTERY_3;     col = lv_color_make(0x3B, 0xD4, 0x79); }
+        else if (battery_pct >= 40) { sym = LV_SYMBOL_BATTERY_2;     col = lv_color_make(0xFF, 0xCC, 0x44); }
+        else if (battery_pct >= 20) { sym = LV_SYMBOL_BATTERY_1;     col = lv_color_make(0xFF, 0x7F, 0x00); }
+        else                        { sym = LV_SYMBOL_BATTERY_EMPTY; col = lv_color_make(0xFF, 0x20, 0x20); }
+        lv_label_set_text(_lbl_batt, sym);
+        lv_obj_set_style_text_color(_lbl_batt, col, 0);
     }
 }
 

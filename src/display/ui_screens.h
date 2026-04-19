@@ -33,7 +33,7 @@ void ui_show_dead();
 
 // Update dynamic widgets each loop (after game_engine_update)
 void ui_update_vitals(const PetState* p);
-void ui_update_header(const PetState* p, bool wifi_connected);
+void ui_update_header(const PetState* p, bool wifi_connected, uint8_t battery_pct);
 
 // Icon menu — highlight the given icon (MENU_COUNT = clear all)
 void ui_menu_set_selected(MenuItem item);
