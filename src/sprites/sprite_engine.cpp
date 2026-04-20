@@ -305,7 +305,7 @@ void sprite_engine_set_state(LifeStage stage, GrotEmotion emotion, EvoQuality qu
     if (_frame_table && _frame_count > 0 && _img_obj)
         lv_image_set_src(_img_obj, _frame_table[0]);
 
-    const bool is_egg  = (stage == LifeStage::EGG && emotion == GrotEmotion::NORMAL);
+    const bool is_egg  = (stage == LifeStage::EGG);
     const bool is_walk = (!is_egg && emotion == GrotEmotion::NORMAL &&
         (stage == LifeStage::CHILD  || stage == LifeStage::TEEN  ||
          stage == LifeStage::ADULT  || stage == LifeStage::SENIOR));

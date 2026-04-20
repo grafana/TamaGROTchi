@@ -15,6 +15,6 @@
     "flash_alerts": true
   },
   "display": {
-    "invert_colors": true
+    "bgr_order": false
   }
 }
