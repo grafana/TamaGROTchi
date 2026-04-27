@@ -27,11 +27,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cache PlatformIO
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.platformio
-          key: platformio-${{ hashFiles('platformio.ini') }}
-          restore-keys: platformio-
+          key: platformio-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            platformio-${{ runner.os }}-${{ github.ref_name }}-
 
       - name: Set up Python
         uses: actions/setup-python@v5
