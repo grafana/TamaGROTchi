@@ -1,0 +1,36 @@
+name: Release Firmware
+
+# Tag-triggered release. Builds the firmware from a clean toolchain (no cache)
+# so the published binary cannot be derived from a poisoned actions/cache entry,
+# then attaches it to a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build firmware
+        run: |
+          pio run -e lolin_s3_mini_1_69
+          mv .pio/build/lolin_s3_mini_1_69/firmware.bin .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          files: .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
+          generate_release_notes: true
