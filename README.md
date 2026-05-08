@@ -1,15 +1,74 @@
 # Tamagrotchi
 
-A Tamagotchi for Grafana employees, featuring **Grot** as your virtual pet.
+A Tamagotchi for Grafana users, featuring **Grot** as your virtual pet.
 Keep Grot alive, watch him evolve, and observe his vital signs flowing into Grafana Cloud as OTLP metrics, logs, and traces.
 
-Built for [Grafana Labs Hackathon #16](https://devpost.team/grafana-bl/projects/14135).
+Built for Grafana Labs Hackathon and featuring at the GrafanaCon Science Fair
+
+<img width="2463" height="1151" alt="image" src="https://github.com/user-attachments/assets/6bf8a0a8-1c5c-4d36-9dbd-52924fc1d1eb" />
 
 ---
 
+## Building & Flashing
+
+```bash
+# Install PlatformIO CLI if needed
+pip install platformio
+
+# Build
+pio run
+
+# Flash firmware
+pio run --target upload
+
+# Flash filesystem (config.json)
+pio run --target uploadfs
+
+# Serial monitor
+pio device monitor
+```
+
+---
+
+## Configuration
+
+Copy `data/config.json.example` to `data/config.json` and fill in your credentials:
+
+```json
+{
+  "wifi": {
+    "ssid": "YOUR_SSID",
+    "password": "YOUR_PASSWORD"
+  },
+  "grafana": {
+    "otlp_base": "https://otlp-gateway-prod-<region>.grafana.net/otlp",
+    "auth_b64":  "Basic <your_grafana_cloud_token>",
+    "device_id": "tamagrotchi"
+  },
+  "game": {
+    "demo_speed": false,
+    "push_interval_s": 60,
+    "buzzer": true,
+    "flash_alerts": true
+  },
+  "display": {
+    "bgr_order": false
+  }
+}
+```
+
+If your display colours seem odd, then set bgr_order to true
+
+> **Auth note:** `auth_b64` must be `Basic <raw_glc_token>` — Grafana Cloud OTLP accepts the token directly after "Basic", not base64-encoded.
+
+Upload the filesystem image after editing: **PlatformIO → Upload Filesystem Image**.
+
+---
+
+
 ## Hardware
 
-**Waveshare ESP32-S3-Touch-LCD-1.69**
+The physical device is built around a Waveshare ESP32-S3-Touch-LCD-1.69
 
 | Component | Detail |
 |---|---|
@@ -90,22 +149,6 @@ Each device generates a random `game_id` (e.g. `Lokirzu`, `Grotpup`) from ~2 025
 
 The OTLP push runs on a background FreeRTOS task (Core 0) so the game loop is never blocked by network I/O. A small notification confirms each push.
 
-### UI Layout (240×280)
-```
-┌─────────────────────────┐  y=0   h=30   Header: age + WiFi status
-│  Age: 0m        WiFi ✓  │
-├─────────────────────────┤  y=30  h=170  Sprite zone (Grot)
-│                         │
-│          GROT           │
-│                         │
-├─────────────────────────┤  y=200 h=22   Vitals bars (hunger/happy/health)
-│ ████░░   ███░░   ████░  │
-├─────────────────────────┤  y=222 h=20   Bar legend
-│ Hunger  Happiness  Health│
-├─────────────────────────┤  y=242 h=38   Button hints
-│ [A] Feed  [B] Menu  [C] Play │
-└─────────────────────────┘
-```
 
 ---
 
@@ -127,6 +170,8 @@ python sim.py \
 
 Or create `simulator/config.json` (see `config.json.example`) and just run `python sim.py`.
 
+We also have a helm chart to deploy a fleet of Grots to your k8s cluster
+
 **Options:**
 
 | Flag | Default | Description |
@@ -144,107 +189,10 @@ Instance 0 is always named **Beylazu** — a fixed anchor for dashboards. All ot
 
 ---
 
-## Project Structure
-
-```
-src/
-├── main.cpp                  # Arduino setup/loop, wires everything together
-├── config.h                  # Pin definitions, game tuning constants
-├── config_mgr/               # LittleFS JSON config loader
-├── display/
-│   ├── lgfx_config.h         # LovyanGFX ST7789V2 panel config
-│   ├── lvgl_port.cpp         # LVGL init, flush callback, draw buffers in PSRAM
-│   ├── lvgl_mem.cpp          # LVGL custom allocator → PSRAM (frees ~147 KB DRAM)
-│   └── ui_screens.cpp        # LVGL screen layout and update API
-├── game/
-│   ├── pet_state.h/cpp       # PetState struct + init
-│   ├── game_engine.cpp       # 1-second tick, stat decay, alerts, sleep/wake
-│   ├── evolution.cpp         # Stage thresholds and quality calculation
-│   └── actions.cpp           # Feed, play, medicine, discipline, dizzy, wake
-├── sprites/
-│   ├── grot_frames.h/cpp     # Frame tables mapping state → sprite arrays
-│   ├── sprite_engine.cpp     # LVGL image object + animation/movement timers
-│   ├── egg-shake.png         # 3-frame 38×38 egg shake sprite sheet
-│   ├── egg_shake_*.cpp       # Auto-generated egg shake frames (0–2)
-│   ├── grot*.png             # Source sprite sheets (32×32 px, RGBA)
-│   └── grot_*.cpp            # Auto-generated LVGL C arrays
-├── telemetry/
-│   └── otlp_writer.cpp       # OTLP/HTTP JSON push (metrics + logs + traces)
-├── input/buttons.cpp         # Debounced button event ring buffer
-├── buzzer/buzzer.cpp         # LEDC tone player, async melody queue
-├── imu/imu_driver.cpp        # QMI8658C accel/gyro, shake detection
-├── rtc/rtc_driver.cpp        # PCF85063A read/write, NTP sync
-├── power/battery.cpp         # ADC battery voltage + percentage
-└── wifi/wifi_manager.cpp     # Non-blocking WiFi FSM + SNTP
-simulator/
-├── sim.py                    # Multi-instance simulator entry point
-├── game_logic.py             # Pet tick/action logic (mirrors firmware behaviour)
-├── pet_state.py              # PetState + enums
-├── otlp_client.py            # OTLP HTTP client (metrics, logs, traces)
-├── requirements.txt          # Python dependencies
-└── config.json.example       # Simulator config template
-tools/
-└── png_to_lvgl.py            # Converts sprite sheet PNGs → LVGL v9 C++ arrays
-hardware/
-├── tamagrotchi-face.stl      # Printable front shell
-├── tamagrotchi-back.stl      # Printable back shell
-└── tamagrotchi.3mf           # Combined 3MF project file
-data/
-└── config.json.example       # Copy to config.json and fill in credentials
-```
 
 ---
 
-## Configuration
 
-Copy `data/config.json.example` to `data/config.json` and fill in your credentials:
-
-```json
-{
-  "wifi": {
-    "ssid": "YOUR_SSID",
-    "password": "YOUR_PASSWORD"
-  },
-  "grafana": {
-    "otlp_base": "https://otlp-gateway-prod-<region>.grafana.net/otlp",
-    "auth_b64":  "Basic <your_grafana_cloud_token>",
-    "device_id": "tamagrotchi"
-  },
-  "game": {
-    "demo_speed": false,
-    "push_interval_s": 10,
-    "buzzer": true,
-    "flash_alerts": true
-  }
-}
-```
-
-> **Auth note:** `auth_b64` must be `Basic <raw_glc_token>` — Grafana Cloud OTLP accepts the token directly after "Basic", not base64-encoded.
-
-Upload the filesystem image after editing: **PlatformIO → Upload Filesystem Image**.
-
----
-
-## Building & Flashing
-
-```bash
-# Install PlatformIO CLI if needed
-pip install platformio
-
-# Build
-pio run
-
-# Flash firmware
-pio run --target upload
-
-# Flash filesystem (config.json)
-pio run --target uploadfs
-
-# Serial monitor
-pio device monitor
-```
-
----
 
 ## Adding / Updating Sprites
 
@@ -275,13 +223,6 @@ The egg sprite (`egg-shake.png`) uses 38×38 px frames; all other sprites use 32
 
 ---
 
-## What's Left / Ideas
-
-- [ ] Mini-games for the play action
-- [ ] More sprite states (eating animation, sick animation)
-- [ ] OTA firmware and config updates
-
----
 
 ## Contributing
 
