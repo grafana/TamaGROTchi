@@ -44,7 +44,7 @@ jobs:
           mv .pio/build/lolin_s3_mini_1_69/firmware.bin .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: firmware
           path: .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
