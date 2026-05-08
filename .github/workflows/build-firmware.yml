@@ -26,7 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Skip cache on tag-triggered runs so release binaries are always built
+      # from a fresh toolchain (mitigates zizmor/cache-poisoning).
       - name: Cache PlatformIO
+        if: github.ref_type != 'tag'
         uses: actions/cache@v4
         with:
           path: ~/.platformio
@@ -55,7 +58,7 @@ jobs:
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: .pio/build/lolin_s3_mini_1_69/tamagrotchi.bin
           generate_release_notes: true
