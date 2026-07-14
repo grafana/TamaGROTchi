@@ -59,7 +59,13 @@ Copy `data/config.json.example` to `data/config.json` and fill in your credentia
 
 If your display colours seem odd, then set bgr_order to true
 
-> **Auth note:** `auth_b64` must be `Basic <raw_glc_token>` — Grafana Cloud OTLP accepts the token directly after "Basic", not base64-encoded.
+> **Auth note:** `auth_b64` must be `Basic <base64(instanceId:glc_token)>` — Grafana Cloud OTLP uses standard Basic auth where the username is your stack's OTLP instance ID and the password is the `glc_` token. Find the instance ID on the **OpenTelemetry → Configure** page of your Grafana Cloud stack, then encode the pair with:
+>
+> ```sh
+> echo -n "<instanceId>:<glc_token>" | base64
+> ```
+>
+> Passing the raw `glc_` token after "Basic" will result in `401 Unauthorized`.
 
 Upload the filesystem image after editing: **PlatformIO → Upload Filesystem Image**.
 
@@ -178,7 +184,7 @@ We also have a helm chart to deploy a fleet of Grots to your k8s cluster
 |---|---|---|
 | `--instances N` | 5 | Number of simultaneous pets |
 | `--otlp-base URL` | — | OTLP gateway base URL |
-| `--auth TOKEN` | — | `Basic glc_...` auth header |
+| `--auth TOKEN` | — | `Basic <base64(instanceId:glc_token)>` auth header |
 | `--speed FLOAT` | 1.0 | Simulation speed multiplier |
 | `--push-interval S` | 30 | OTLP push interval in seconds |
 | `--verbose` | off | Print per-push HTTP status |
