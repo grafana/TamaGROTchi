@@ -3,7 +3,7 @@ instances: 5
 
 image:
   repository: ghcr.io/nedsbeds/tamagrotchi-sim
-  tag: latest
+  tag: latest@sha256:5fea0b3a6189fcef215e5f06e1c6b0795a7c7682c7361c2c1f49f165f10bc58a
   pullPolicy: Always  # Always pull so 'latest' stays current
 
 # Device ID prefix — pods become {devicePrefix}-00 … {devicePrefix}-NN
