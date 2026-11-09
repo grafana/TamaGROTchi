@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cache PlatformIO
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.platformio
           key: platformio-${{ hashFiles('platformio.ini') }}
